@@ -1,0 +1,253 @@
+FORM map_tax_ibscbs  USING    p_lineid
+                     CHANGING ct_rfc_ibscbs  TYPE j_1bnfe_t_rfc_tax_ibscbs
+                              cs_rfc_det_tax TYPE j_1bnfe_s_rfc_det_tax.
+
+  DATA ls_item_tax   TYPE j_1bnfstx.
+  DATA ls_rfc_ibscbs TYPE j_1bnfe_s_rfc_tax_ibscbs.
+
+  ls_rfc_ibscbs-id                        = p_lineid.
+  ls_rfc_ibscbs-cst                       = xmli-cst_ibscbs.
+  ls_rfc_ibscbs-c_class_trib              = xmli-cclasstrib.
+  ls_rfc_ibscbs-p_ibs_uf                  = |{ xmli-pibsuf }|.
+  ls_rfc_ibscbs-p_dif_ibs_uf              = |{ xmli-pdifibsuf }|.
+  ls_rfc_ibscbs-v_dif_ibs_uf              = |{ xmli-vdifibsuf }|.
+  ls_rfc_ibscbs-v_dev_trib_ibs_uf         = |{ xmli-vdevtribibsuf }|.
+  ls_rfc_ibscbs-p_red_aliq_ibs_uf         = |{ xmli-predaliqibsuf }|.
+  ls_rfc_ibscbs-p_ibs_mun                 = |{ xmli-pibsmun }|.
+  ls_rfc_ibscbs-p_dif_ibs_mun             = |{ xmli-pdifibsmun }|.
+  ls_rfc_ibscbs-v_dif_ibs_mun             = |{ xmli-vdifibsmun }|.
+  ls_rfc_ibscbs-v_dev_trib_ibs_mun        = |{ xmli-vdevtribibsmun }|.
+  ls_rfc_ibscbs-p_red_aliq_ibs_mun        = |{ xmli-predaliqibsmun }|.
+  ls_rfc_ibscbs-p_cbs                     = |{ xmli-pcbs }|.
+  ls_rfc_ibscbs-p_dif_cbs                 = |{ xmli-pdifcbs }|.
+  ls_rfc_ibscbs-v_dif_cbs                 = |{ xmli-vdifcbs }|.
+  ls_rfc_ibscbs-v_dev_trib_cbs            = |{ xmli-vdevtribcbs }|.
+  ls_rfc_ibscbs-p_red_aliq_cbs            = |{ xmli-predaliqcbs }|.
+  ls_rfc_ibscbs-cst_reg                   = xmli-cstreg.
+  ls_rfc_ibscbs-c_class_trib_reg          = xmli-cclasstribreg.
+  ls_rfc_ibscbs-p_aliq_efet_reg_ibs_uf    = |{ xmli-paliqefetregibsuf }|.
+  ls_rfc_ibscbs-v_trib_reg_ibs_uf         = |{ xmli-vtribregibsuf }|.
+  ls_rfc_ibscbs-p_aliq_efet_reg_ibs_mun   = |{ xmli-paliqefetregibsmun }|.
+  ls_rfc_ibscbs-v_trib_reg_ibs_mun        = |{ xmli-vtribregibsmun }|.
+  ls_rfc_ibscbs-p_aliq_efet_reg_cbs       = |{ xmli-paliqefetregcbs }|.
+  ls_rfc_ibscbs-v_trib_reg_cbs            = |{ xmli-vtribregcbs }|.
+  ls_rfc_ibscbs-c_cred_pres_ibs           = |{ xmli-ccredpresibs }|.
+  ls_rfc_ibscbs-p_cred_pres_ibs           = |{ xmli-pcredpresibs }|.
+  ls_rfc_ibscbs-v_cred_pres_ibs           = |{ xmli-vcredpresibs }|.
+  ls_rfc_ibscbs-v_cred_pres_cond_sus_ibs  = |{ xmli-vcredprescondsusibs }|.
+  ls_rfc_ibscbs-c_cred_pres_cbs           = |{ xmli-ccredprescbs }|.
+  ls_rfc_ibscbs-p_cred_pres_cbs           = |{ xmli-pcredprescbs }|.
+  ls_rfc_ibscbs-v_cred_pres_cbs           = |{ xmli-vcredprescbs }|.
+  ls_rfc_ibscbs-v_cred_pres_cond_sus_cbs  = |{ xmli-vcredprescondsuscbs }|.
+  ls_rfc_ibscbs-p_ibs_uf_gov_pur          = |{ xmli-pibsufgovpur }|.
+  ls_rfc_ibscbs-v_ibs_uf_gov_pur          = |{ xmli-vibsufgovpur }|.
+  ls_rfc_ibscbs-p_ibs_mun_gov_pur         = |{ xmli-pibsmungovpur }|.
+  ls_rfc_ibscbs-v_ibs_mun_gov_pur         = |{ xmli-vibsmungovpur }|.
+  ls_rfc_ibscbs-p_cbs_gov_pur             = |{ xmli-pcbsgovpur }|.
+  ls_rfc_ibscbs-v_cbs_gov_pur             = |{ xmli-vcbsgovpur }|.
+  ls_rfc_ibscbs-v_ibs_transf_cred         = |{ xmli-vibstransfcred }|.
+  ls_rfc_ibscbs-v_cbs_transf_cred         = |{ xmli-vcbstransfcred }|.
+  ls_rfc_ibscbs-tp_cred_pres_ibs_zfm      = |{ xmli-tpcredpresibszfm }|.
+  ls_rfc_ibscbs-v_cred_pres_ibs_zfm       = |{ xmli-vcredpresibszfm }|.
+  ls_rfc_ibscbs-v_ibs                     = |{ xmli-vibs }|.
+
+  LOOP AT wk_item_tax INTO ls_item_tax WHERE itmnum = xmli-itmnum
+                                         AND taxoff = ''
+                                         AND ( taxgrp = gc_taxgroup_cbs
+                                          OR taxgrp = gc_taxgroup_ibsm
+                                          OR taxgrp = gc_taxgroup_ibss ).
+
+    ls_rfc_ibscbs-v_bc = |{ ls_item_tax-base }|.
+    EXIT.
+  ENDLOOP.
+
+  READ TABLE wk_item_tax INTO ls_item_tax WITH KEY itmnum = xmli-itmnum
+                                                   taxgrp = gc_taxgroup_ibss
+                                                   taxoff = ''.
+  IF sy-subrc EQ 0.
+    ls_rfc_ibscbs-v_ibs_uf = |{ ls_item_tax-taxval }|.
+
+    IF xmli-predaliqibsuf IS NOT INITIAL.
+      IF ls_item_tax-rate4dec IS NOT INITIAL.
+        ls_rfc_ibscbs-p_aliq_efet_ibs_uf  = |{ ls_item_tax-rate4dec }|.
+      ELSE.
+        ls_rfc_ibscbs-p_aliq_efet_ibs_uf  = |{ ls_item_tax-rate }|.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+  READ TABLE wk_item_tax INTO ls_item_tax WITH KEY itmnum = xmli-itmnum
+                                                   taxgrp = gc_taxgroup_ibsm
+                                                   taxoff = ''.
+  IF sy-subrc EQ 0.
+    ls_rfc_ibscbs-v_ibs_mun = |{ ls_item_tax-taxval }|.
+
+    IF xmli-predaliqibsmun IS NOT INITIAL.
+      IF ls_item_tax-rate4dec IS NOT INITIAL.
+        ls_rfc_ibscbs-p_aliq_efet_ibs_mun = |{ ls_item_tax-rate4dec }|.
+      ELSE.
+        ls_rfc_ibscbs-p_aliq_efet_ibs_mun = |{ ls_item_tax-rate }|.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+  READ TABLE wk_item_tax INTO ls_item_tax WITH KEY itmnum = xmli-itmnum
+                                                   taxgrp = gc_taxgroup_cbs
+                                                   taxoff = ''.
+  IF sy-subrc EQ 0.
+    ls_rfc_ibscbs-v_cbs = |{ ls_item_tax-taxval }|.
+
+    IF xmli-predaliqcbs IS NOT INITIAL.
+      IF ls_item_tax-rate4dec IS NOT INITIAL.
+        ls_rfc_ibscbs-p_aliq_efet_cbs = |{ ls_item_tax-rate4dec }|.
+      ELSE.
+        ls_rfc_ibscbs-p_aliq_efet_cbs = |{ ls_item_tax-rate }|.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+  IF ls_rfc_ibscbs-cst IS NOT INITIAL.
+    APPEND ls_rfc_ibscbs TO ct_rfc_ibscbs.
+    cs_rfc_det_tax-ibscbs_ref = p_lineid.
+
+    CLEAR: gt_xml_ext2_tab[],
+           gv_id.
+
+    DATA(lt_xml_ext2_tab) = xml_ext2_tab[].
+
+    IF lt_xml_ext2_tab[] IS NOT INITIAL.
+
+      SORT lt_xml_ext2_tab BY docnum ASCENDING
+                              itmnum DESCENDING.
+
+      TRY.
+          gv_id = lt_xml_ext2_tab[ 1 ]-itmnum.
+        CATCH cx_sy_itab_line_not_found.
+      ENDTRY.
+
+      gv_id += 1.
+
+    ELSE.
+
+      gv_id = 1.
+
+    ENDIF.
+
+    APPEND:
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'CST'                      value = ls_rfc_ibscbs-cst                       ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'C_CLASS_TRIB'             value = ls_rfc_ibscbs-c_class_trib              ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_BC'                     value = ls_rfc_ibscbs-v_bc                      ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_IBS_UF'                 value = ls_rfc_ibscbs-p_ibs_uf                  ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_DIF_IBS_UF'             value = ls_rfc_ibscbs-p_dif_ibs_uf              ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_DIF_IBS_UF'             value = ls_rfc_ibscbs-v_dif_ibs_uf              ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_DEV_TRIB_IBS_UF'        value = ls_rfc_ibscbs-v_dev_trib_ibs_uf         ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_RED_ALIQ_IBS_UF'        value = ls_rfc_ibscbs-p_red_aliq_ibs_uf         ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_ALIQ_EFET_IBS_UF'       value = ls_rfc_ibscbs-p_aliq_efet_ibs_uf        ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_IBS_UF'                 value = ls_rfc_ibscbs-v_ibs_uf                  ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_IBS_MUN'                value = ls_rfc_ibscbs-p_ibs_mun                 ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_DIF_IBS_MUN'            value = ls_rfc_ibscbs-p_dif_ibs_mun             ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_DIF_IBS_MUN'            value = ls_rfc_ibscbs-v_dif_ibs_mun             ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_DEV_TRIB_IBS_MUN'       value = ls_rfc_ibscbs-v_dev_trib_ibs_mun        ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_RED_ALIQ_IBS_MUN'       value = ls_rfc_ibscbs-p_red_aliq_ibs_mun        ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_ALIQ_EFET_IBS_MUN'      value = ls_rfc_ibscbs-p_aliq_efet_ibs_mun       ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_IBS_MUN'                value = ls_rfc_ibscbs-v_ibs_mun                 ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_CBS'                    value = ls_rfc_ibscbs-p_cbs                     ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_DIF_CBS'                value = ls_rfc_ibscbs-p_dif_cbs                 ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_DIF_CBS'                value = ls_rfc_ibscbs-v_dif_cbs                 ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_DEV_TRIB_CBS'           value = ls_rfc_ibscbs-v_dev_trib_cbs            ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_RED_ALIQ_CBS'           value = ls_rfc_ibscbs-p_red_aliq_cbs            ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_ALIQ_EFET_CBS'          value = ls_rfc_ibscbs-p_aliq_efet_cbs           ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_CBS'                    value = ls_rfc_ibscbs-v_cbs                     ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'CST_REG'                  value = ls_rfc_ibscbs-cst_reg                   ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'C_CLASS_TRIB_REG'         value = ls_rfc_ibscbs-c_class_trib_reg          ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_ALIQ_EFET_REG_IBS_UF'   value = ls_rfc_ibscbs-p_aliq_efet_reg_ibs_uf    ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_TRIB_REG_IBS_UF'        value = ls_rfc_ibscbs-v_trib_reg_ibs_uf         ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_ALIQ_EFET_REG_IBS_MUN'  value = ls_rfc_ibscbs-p_aliq_efet_reg_ibs_mun   ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_TRIB_REG_IBS_MUN'       value = ls_rfc_ibscbs-v_trib_reg_ibs_mun        ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_ALIQ_EFET_REG_CBS'      value = ls_rfc_ibscbs-p_aliq_efet_reg_cbs       ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_TRIB_REG_CBS'           value = ls_rfc_ibscbs-v_trib_reg_cbs            ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'C_CRED_PRES_IBS'          value = ls_rfc_ibscbs-c_cred_pres_ibs           ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_CRED_PRES_IBS'          value = ls_rfc_ibscbs-p_cred_pres_ibs           ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_CRED_PRES_IBS'          value = ls_rfc_ibscbs-v_cred_pres_ibs           ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_CRED_PRES_COND_SUS_IBS' value = ls_rfc_ibscbs-v_cred_pres_cond_sus_ibs  ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'C_CRED_PRES_CBS'          value = ls_rfc_ibscbs-c_cred_pres_cbs           ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_CRED_PRES_CBS'          value = ls_rfc_ibscbs-p_cred_pres_cbs           ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_CRED_PRES_CBS'          value = ls_rfc_ibscbs-v_cred_pres_cbs           ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_CRED_PRES_COND_SUS_CBS' value = ls_rfc_ibscbs-v_cred_pres_cond_sus_cbs  ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_IBS_UF_GOV_PUR'         value = ls_rfc_ibscbs-p_ibs_uf_gov_pur          ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_IBS_UF_GOV_PUR'         value = ls_rfc_ibscbs-v_ibs_uf_gov_pur          ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_IBS_MUN_GOV_PUR'        value = ls_rfc_ibscbs-p_ibs_mun_gov_pur         ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_IBS_MUN_GOV_PUR'        value = ls_rfc_ibscbs-v_ibs_mun_gov_pur         ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'P_CBS_GOV_PUR'            value = ls_rfc_ibscbs-p_cbs_gov_pur             ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_CBS_GOV_PUR'            value = ls_rfc_ibscbs-v_cbs_gov_pur             ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_IBS_TRANSF_CRED'        value = ls_rfc_ibscbs-v_ibs_transf_cred         ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_CBS_TRANSF_CRED'        value = ls_rfc_ibscbs-v_cbs_transf_cred         ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'TP_CRED_PRES_IBS_ZFM'     value = ls_rfc_ibscbs-tp_cred_pres_ibs_zfm      ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_CRED_PRES_IBS_ZFM'      value = ls_rfc_ibscbs-v_cred_pres_ibs_zfm       ) TO gt_xml_ext2_tab,
+      VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = gv_id param = 'DET_IMPOSTO_IBSCBS' field = 'V_IBS'                    value = ls_rfc_ibscbs-v_ibs                     ) TO gt_xml_ext2_tab.
+
+    READ TABLE wk_item_tax INTO DATA(ls_item_tax_1) WITH KEY docnum = xmli-docnum
+                                                             itmnum = xmli-itmnum
+                                                             taxgrp = 'CBS'.
+
+    IF sy-subrc = 0.
+
+      IF ls_item_tax_1-rate = 0 AND ls_item_tax_1-rate4dec = 0.
+
+        DATA(lv_cbs) = abap_true.
+
+      ENDIF.
+
+    ENDIF.
+
+    CLEAR: ls_item_tax_1.
+
+    READ TABLE wk_item_tax INTO ls_item_tax_1 WITH KEY docnum = xmli-docnum
+                                                       itmnum = xmli-itmnum
+                                                       taxgrp = 'IBSS'.
+
+    IF sy-subrc = 0.
+
+      IF ls_item_tax_1-rate = 0 AND ls_item_tax_1-rate4dec = 0.
+
+        DATA(lv_ibss) = abap_true.
+
+      ENDIF.
+
+    ENDIF.
+
+    LOOP AT gt_xml_ext2_tab ASSIGNING FIELD-SYMBOL(<fs_ext2>).
+
+      CONDENSE <fs_ext2>-value NO-GAPS.
+
+      IF <fs_ext2>-field = 'P_IBS_MUN' OR
+         <fs_ext2>-field = 'V_IBS_MUN' OR
+         ( lv_ibss IS NOT INITIAL AND
+          ( <fs_ext2>-field = 'P_IBS_UF' OR
+            <fs_ext2>-field = 'V_IBS_UF' OR
+            <fs_ext2>-field = 'V_IBS'  ) ) OR
+         ( lv_cbs IS NOT INITIAL AND
+          ( <fs_ext2>-field = 'P_CBS' OR
+            <fs_ext2>-field = 'P_DIF_CBS' OR
+            <fs_ext2>-field = 'V_DIF_CBS' OR
+            <fs_ext2>-field = 'V_DEV_TRIB_CBS' OR
+            <fs_ext2>-field = 'P_RED_ALIQ_CBS' OR
+            <fs_ext2>-field = 'P_ALIQ_EFET_CBS' OR
+            <fs_ext2>-field = 'V_CBS' ) ).
+        <fs_ext2>-row = 99.
+      ENDIF.
+
+    ENDLOOP.
+
+    IF gt_xml_ext2_tab[] IS NOT INITIAL.
+
+      APPEND LINES OF gt_xml_ext2_tab[] TO xml_ext2_tab[].
+
+    ENDIF.
+
+    CLEAR: lv_cbs,
+           lv_ibss.
+
+  ENDIF.
+
+ENDFORM.
