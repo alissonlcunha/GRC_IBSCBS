@@ -1,0 +1,49 @@
+FORM map_ibscbs_tot_to_xmlh  USING    wk_item_tax TYPE j_1b_tt_nfstx
+                                      xmli_tab TYPE j1b_nf_xml_item_tab
+                             CHANGING xmlh TYPE j1b_nf_xml_header.
+
+  DATA ls_item_tax TYPE j_1bnfstx.
+  DATA ls_xmli     TYPE j1b_nf_xml_item.
+
+  PERFORM clear_ibscbs_total_fields CHANGING xmlh.
+
+  LOOP AT wk_item_tax INTO ls_item_tax WHERE taxoff <> 'X'.
+
+    CASE ls_item_tax-taxgrp.
+
+      WHEN gc_taxgroup_ibss.
+
+        xmlh-vibsuf = xmlh-vibsuf + ls_item_tax-taxval.
+
+      WHEN gc_taxgroup_ibsm.
+
+        xmlh-vibsmun = xmlh-vibsmun + ls_item_tax-taxval.
+
+      WHEN gc_taxgroup_cbs.
+
+        xmlh-vbcibscbs = xmlh-vbcibscbs + ls_item_tax-base.
+        xmlh-vcbs = xmlh-vcbs + ls_item_tax-taxval.
+
+    ENDCASE.
+
+  ENDLOOP.
+
+  LOOP AT xmli_tab INTO ls_xmli.
+
+    xmlh-vdifibsuf           = xmlh-vdifibsuf           + ls_xmli-vdifibsuf.
+    xmlh-vdevtribibsuf       = xmlh-vdevtribibsuf       + ls_xmli-vdevtribibsuf.
+    xmlh-vdifibsmun          = xmlh-vdifibsmun          + ls_xmli-vdifibsmun.
+    xmlh-vdevtribibsmun      = xmlh-vdevtribibsmun      + ls_xmli-vdevtribibsmun.
+    xmlh-vcredpresibs        = xmlh-vcredpresibs        + ls_xmli-vcredpresibs.
+    xmlh-vcredprescondsusibs = xmlh-vcredprescondsusibs + ls_xmli-vcredprescondsusibs.
+    xmlh-vcredprescbs        = xmlh-vcredprescbs        + ls_xmli-vcredprescbs.
+    xmlh-vcredprescondsuscbs = xmlh-vcredprescondsuscbs + ls_xmli-vcredprescondsuscbs.
+    xmlh-vdifcbs             = xmlh-vdifcbs             + ls_xmli-vdifcbs.
+    xmlh-vdevtribcbs         = xmlh-vdevtribcbs         + ls_xmli-vdevtribcbs.
+    xmlh-vibs                = xmlh-vibs                + ls_xmli-vibs.
+
+  ENDLOOP.
+
+  xmlh-vnftot = xmlh-s1_vnf.
+
+ENDFORM.
