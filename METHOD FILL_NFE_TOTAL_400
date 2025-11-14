@@ -1,0 +1,237 @@
+METHOD FILL_NFE_TOTAL_400.
+
+  DATA: lv_choice(30)                        TYPE c,
+        lv_dummy                             TYPE string,
+        lv_vdesc                             TYPE string,
+        lv_blank                             TYPE c,
+        lv_d_compet                          TYPE /xnfe/date_sefaz.
+
+  FIELD-SYMBOLS: <content>                   TYPE /xnfe/input_mapping,
+                 <ls_nfe_icmstot>            TYPE /xnfe/if_nfe_icmstot_400_s,
+                 <total>                     TYPE /xnfe/009_nfe_b_nfe_batch_o167,
+                 <ls_nfe_issqntot>           TYPE /xnfe/if_nfe_issqntot_s,
+                 <ls_nfe_rettrib>            TYPE /xnfe/if_nfe_rettrib_s,
+                 <lt_nfe_imposto_icmsufdest> TYPE /xnfe/if_nfe_imp_icmsufd_400_t,
+                 <proxystruc>                TYPE any.
+
+  READ TABLE me->mt_content WITH KEY param_name = 'IS_NFE_ICMSTOT' ASSIGNING <content>.
+  ASSIGN <content>-param_value->* TO <ls_nfe_icmstot>.
+
+  READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_IMPOSTO_ICMSUFDEST' ASSIGNING <content>.
+  ASSIGN <content>-param_value->* TO <lt_nfe_imposto_icmsufdest>.
+
+  ASSIGN me->ms_inf_nfe->* TO <proxystruc>.
+  ASSIGN COMPONENT 'TOTAL' OF STRUCTURE <proxystruc> TO <total>.
+
+* total
+** ICMSTot
+  <total>-icmstot-v_bc = <ls_nfe_icmstot>-v_bc.
+  <total>-icmstot-v_icms = <ls_nfe_icmstot>-v_icms.
+  <total>-icmstot-v_icmsdeson = <ls_nfe_icmstot>-v_icmsdeson.
+  IF NOT <ls_nfe_icmstot>-v_fcpufdest IS INITIAL OR NOT <lt_nfe_imposto_icmsufdest> IS INITIAL.
+    <total>-icmstot-v_fcpufdest = <ls_nfe_icmstot>-v_fcpufdest.
+  ENDIF.
+  IF NOT <ls_nfe_icmstot>-v_icmsufdest IS INITIAL OR NOT <lt_nfe_imposto_icmsufdest> IS INITIAL.
+    <total>-icmstot-v_icmsufdest = <ls_nfe_icmstot>-v_icmsufdest.
+  ENDIF.
+  IF NOT <ls_nfe_icmstot>-v_icmsufremet IS INITIAL OR NOT <lt_nfe_imposto_icmsufdest> IS INITIAL.
+    <total>-icmstot-v_icmsufremet = <ls_nfe_icmstot>-v_icmsufremet.
+  ENDIF.
+  <total>-icmstot-v_fcp = <ls_nfe_icmstot>-v_fcp.
+  <total>-icmstot-v_bcst = <ls_nfe_icmstot>-v_bcst.
+  <total>-icmstot-v_st = <ls_nfe_icmstot>-v_st.
+  <total>-icmstot-v_fcpst = <ls_nfe_icmstot>-v_fcpst.
+  <total>-icmstot-v_fcpstret = <ls_nfe_icmstot>-v_fcpstret.
+  IF NOT <ls_nfe_icmstot>-q_bcmono IS INITIAL.    "Just skip it when initial (info from Brazil)
+    <total>-icmstot-q_bcmono = <ls_nfe_icmstot>-q_bcmono.
+  ENDIF.
+  IF NOT <ls_nfe_icmstot>-v_icmsmono IS INITIAL.    "Just skip it when initial (info from Brazil)
+    <total>-icmstot-v_icmsmono = <ls_nfe_icmstot>-v_icmsmono.
+  ENDIF.
+  IF NOT <ls_nfe_icmstot>-q_bcmono_reten IS INITIAL. "Just skip it when initial (info from Brazil)
+    <total>-icmstot-q_bcmono_reten = <ls_nfe_icmstot>-q_bcmono_reten.
+  ENDIF.
+  IF NOT <ls_nfe_icmstot>-v_icmsmono_reten IS INITIAL. "Just skip it when initial (info from Brazil)
+    <total>-icmstot-v_icmsmono_reten = <ls_nfe_icmstot>-v_icmsmono_reten.
+  ENDIF.
+  IF NOT <ls_nfe_icmstot>-q_bcmono_ret IS INITIAL.  "Just skip it when initial (info from Brazil)
+    <total>-icmstot-q_bcmono_ret = <ls_nfe_icmstot>-q_bcmono_ret.
+  ENDIF.
+  IF NOT <ls_nfe_icmstot>-v_icmsmono_ret IS INITIAL.  "Just skip it when initial (info from Brazil)
+    <total>-icmstot-v_icmsmono_ret = <ls_nfe_icmstot>-v_icmsmono_ret.
+  ENDIF.
+  <total>-icmstot-v_prod = <ls_nfe_icmstot>-v_prod.
+  <total>-icmstot-v_frete = <ls_nfe_icmstot>-v_frete.
+  <total>-icmstot-v_seg = <ls_nfe_icmstot>-v_seg.
+  lv_vdesc = <ls_nfe_icmstot>-v_desc.                           "convert to positive value
+  REPLACE ALL OCCURRENCES OF '-' IN lv_vdesc WITH lv_blank.
+  CONDENSE lv_vdesc NO-GAPS.
+  <total>-icmstot-v_desc = lv_vdesc.
+  <total>-icmstot-v_ii = <ls_nfe_icmstot>-v_ii.
+  <total>-icmstot-v_ipi = <ls_nfe_icmstot>-v_ipi.
+  <total>-icmstot-v_ipidevol = <ls_nfe_icmstot>-v_ipidevol.
+  <total>-icmstot-v_pis = <ls_nfe_icmstot>-v_pis.
+  <total>-icmstot-v_cofins = <ls_nfe_icmstot>-v_cofins.
+  <total>-icmstot-v_outro = <ls_nfe_icmstot>-v_outro.
+  <total>-icmstot-v_nf = <ls_nfe_icmstot>-v_nf.
+  IF NOT <ls_nfe_icmstot>-v_tot_trib IS INITIAL.                "Just skip it when initial (info from Brazil)
+    <total>-icmstot-v_tot_trib = <ls_nfe_icmstot>-v_tot_trib.
+  ENDIF.
+  CLEAR: lv_vdesc.
+
+** ISSQNtot
+  READ TABLE me->mt_content WITH KEY param_name = 'IS_NFE_ISSQNTOT' ASSIGNING <content>.
+  ASSIGN <content>-param_value->* TO <ls_nfe_issqntot>.
+
+  IF NOT <ls_nfe_issqntot> IS INITIAL.
+    IF NOT <ls_nfe_issqntot>-v_serv IS INITIAL.
+      <total>-issqntot-v_serv = <ls_nfe_issqntot>-v_serv.
+    ENDIF.
+    IF NOT <ls_nfe_issqntot>-v_bc IS INITIAL.
+      <total>-issqntot-v_bc = <ls_nfe_issqntot>-v_bc.
+    ENDIF.
+    IF NOT <ls_nfe_issqntot>-v_iss IS INITIAL.
+      <total>-issqntot-v_iss = <ls_nfe_issqntot>-v_iss.
+    ENDIF.
+    IF NOT <ls_nfe_issqntot>-v_pis IS INITIAL.
+      <total>-issqntot-v_pis = <ls_nfe_issqntot>-v_pis.
+    ENDIF.
+    IF NOT <ls_nfe_issqntot>-v_cofins IS INITIAL.
+      <total>-issqntot-v_cofins = <ls_nfe_issqntot>-v_cofins.
+    ENDIF.
+    lv_d_compet = me->convert_date( iv_date = <ls_nfe_issqntot>-d_compet ).        "AAAA-MM-DD
+    <total>-issqntot-d_compet = lv_d_compet.
+    CLEAR: lv_d_compet.
+    IF NOT <ls_nfe_issqntot>-v_deducao IS INITIAL.
+      <total>-issqntot-v_deducao = <ls_nfe_issqntot>-v_deducao.
+    ENDIF.
+    IF NOT <ls_nfe_issqntot>-v_outro IS INITIAL.
+      <total>-issqntot-v_outro = <ls_nfe_issqntot>-v_outro.
+    ENDIF.
+    IF NOT <ls_nfe_issqntot>-v_desc_incond IS INITIAL.
+      <total>-issqntot-v_desc_incond = <ls_nfe_issqntot>-v_desc_incond.
+    ENDIF.
+    IF NOT <ls_nfe_issqntot>-v_desc_cond IS INITIAL.
+      <total>-issqntot-v_desc_cond = <ls_nfe_issqntot>-v_desc_cond.
+    ENDIF.
+    IF NOT <ls_nfe_issqntot>-v_issret IS INITIAL.
+      <total>-issqntot-v_issret = <ls_nfe_issqntot>-v_issret.
+    ENDIF.
+    IF NOT <ls_nfe_issqntot>-c_reg_trib IS INITIAL.
+      <total>-issqntot-c_reg_trib = <ls_nfe_issqntot>-c_reg_trib.
+    ENDIF.
+  ENDIF.
+
+** retTrib
+  READ TABLE me->mt_content WITH KEY param_name = 'IS_NFE_RETTRIB' ASSIGNING <content>.
+  ASSIGN <content>-param_value->* TO <ls_nfe_rettrib>.
+
+  IF NOT <ls_nfe_rettrib> IS INITIAL.
+    IF NOT <ls_nfe_rettrib>-v_ret_pis IS INITIAL.
+      <total>-ret_trib-v_ret_pis = <ls_nfe_rettrib>-v_ret_pis.
+    ENDIF.
+    IF NOT <ls_nfe_rettrib>-v_ret_cofins IS INITIAL.
+      <total>-ret_trib-v_ret_cofins = <ls_nfe_rettrib>-v_ret_cofins.
+    ENDIF.
+    IF NOT <ls_nfe_rettrib>-v_ret_csll IS INITIAL.
+      <total>-ret_trib-v_ret_csll = <ls_nfe_rettrib>-v_ret_csll.
+    ENDIF.
+    IF NOT <ls_nfe_rettrib>-v_bcirrf IS INITIAL.
+      <total>-ret_trib-v_bcirrf = <ls_nfe_rettrib>-v_bcirrf.
+    ENDIF.
+    IF NOT <ls_nfe_rettrib>-v_irrf IS INITIAL.
+      <total>-ret_trib-v_irrf = <ls_nfe_rettrib>-v_irrf.
+    ENDIF.
+    IF NOT <ls_nfe_rettrib>-v_bcret_prev IS INITIAL.
+      <total>-ret_trib-v_bcret_prev = <ls_nfe_rettrib>-v_bcret_prev.
+    ENDIF.
+    IF NOT <ls_nfe_rettrib>-v_ret_prev IS INITIAL.
+      <total>-ret_trib-v_ret_prev = <ls_nfe_rettrib>-v_ret_prev.
+    ENDIF.
+  ENDIF.
+
+*** IS_TOT -> not supported
+
+*** IBSCBST -> not supported
+
+*** vNFTot -> field not supported
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""$"$\SE:(1) Classe /XNFE/CL_T2PROXY_NFE_400, Método FILL_NFE_TOTAL_400, Fim                                                                                   A
+*$*$-Start: (1)---------------------------------------------------------------------------------$*$*
+ENHANCEMENT 2  Z_XNFE_TAGS_XML.    "active version
+
+  FIELD-SYMBOLS: <lt_nfe_ext2> TYPE /xnfe/nfe_ext2_tab,
+                 <ibscbstot>   TYPE /xnfe/009_nfe_b_tibscbsmono_to.
+
+  UNASSIGN <content>.
+
+  READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_EXT2' ASSIGNING <content>.
+
+  ASSIGN <content>-param_value->* TO <lt_nfe_ext2>.
+
+  IF <lt_nfe_ext2> IS ASSIGNED.
+
+    DATA(lt_nfe_ext2) = <lt_nfe_ext2>.
+
+    DELETE: lt_nfe_ext2 WHERE value IS INITIAL,
+            lt_nfe_ext2 WHERE value = '0.0000' AND row <> 99,
+            lt_nfe_ext2 WHERE value = '0.00' AND row <> 99.
+
+    ASSIGN COMPONENT 'IBSCBSTOT' OF STRUCTURE <total> TO <ibscbstot>.
+
+    READ TABLE lt_nfe_ext2 TRANSPORTING NO FIELDS WITH KEY param = 'DET_IMPOSTO_IBSCBS'.
+
+    IF sy-subrc <> 0.
+      RETURN.
+    ENDIF.
+
+    LOOP AT <lt_nfe_ext2> INTO DATA(nfe_ext2) WHERE param = 'TOTAL_IMPOSTO_IBSCBS'.
+
+      READ TABLE <lt_nfe_ext2> ASSIGNING FIELD-SYMBOL(<nfe_ext2>) WITH KEY param = 'TOTAL_IMPOSTO_IBSCBS'
+                                                                           field = nfe_ext2-field.
+
+      IF sy-subrc = 0.
+
+        CASE <nfe_ext2>-field.
+          WHEN 'V_IBS_UF'.
+            <ibscbstot>-g_ibs-g_ibsuf-v_ibsuf = <nfe_ext2>-value.
+          WHEN 'V_IBS_MUN'.
+            <ibscbstot>-g_ibs-g_ibsmun-v_ibsmun = <nfe_ext2>-value.
+          WHEN 'V_IBS'.
+            <ibscbstot>-g_ibs-v_ibs = <nfe_ext2>-value.
+          WHEN 'V_CBS'.
+            <ibscbstot>-g_cbs-v_cbs = <nfe_ext2>-value.
+          WHEN 'V_BC_IBS_CBS'.
+            <ibscbstot>-v_bcibscbs = <nfe_ext2>-value.
+          WHEN 'V_DIF_IBS_UF'.
+            <ibscbstot>-g_ibs-g_ibsuf-v_dif = <nfe_ext2>-value.
+          WHEN 'V_DEV_TRIB_IBS_UF'.
+            <ibscbstot>-g_ibs-g_ibsuf-v_dev_trib = <nfe_ext2>-value.
+          WHEN 'V_DIF_IBS_MUN'.
+            <ibscbstot>-g_ibs-g_ibsmun-v_dif = <nfe_ext2>-value.
+          WHEN 'V_DEV_TRIB_IBS_MUN'.
+            <ibscbstot>-g_ibs-g_ibsmun-v_dev_trib = <nfe_ext2>-value.
+          WHEN 'V_CRED_PRES_IBS'.
+            <ibscbstot>-g_ibs-v_cred_pres = <nfe_ext2>-value.
+          WHEN 'V_CRED_PRES_COND_SUS_IBS'.
+            <ibscbstot>-g_ibs-v_cred_pres_cond_sus = <nfe_ext2>-value.
+          WHEN 'V_DIF_CBS'.
+            <ibscbstot>-g_cbs-v_dif = <nfe_ext2>-value.
+          WHEN 'V_DEV_TRIB_CBS'.
+            <ibscbstot>-g_cbs-v_dev_trib = <nfe_ext2>-value.
+          WHEN 'V_CRED_PRES_CBS'.
+            <ibscbstot>-g_cbs-v_cred_pres = <nfe_ext2>-value.
+          WHEN 'V_CRED_PRES_COND_SUS_CBS'.
+            <ibscbstot>-g_cbs-v_cred_pres_cond_sus = <nfe_ext2>-value.
+          WHEN OTHERS.
+        ENDCASE.
+
+      ENDIF.
+
+    ENDLOOP.
+
+  ENDIF.
+
+ENDENHANCEMENT.
+*$*$-End:   (1)---------------------------------------------------------------------------------$*$*
+ENDMETHOD.
