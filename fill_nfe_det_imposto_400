@@ -1,0 +1,1184 @@
+METHOD fill_nfe_det_imposto_400.
+
+  DATA: lv_dummy                             TYPE string,
+        lv_ind_final                         TYPE /xnfe/indfinal,
+        lv_ind_iss(2)                        TYPE c,
+        lv_p_icms_inter                      TYPE p DECIMALS 2.
+
+  DATA: ls_nfe_imposto_icms                  TYPE /xnfe/if_nfe_imposto_icms_400s,
+        ls_nfe_imposto_ipi                   TYPE /xnfe/if_nfe_imposto_ipi_400_s,
+        ls_nfe_imposto_ii                    TYPE /xnfe/if_nfe_imposto_ii_s,
+        ls_nfe_imposto_issqn                 TYPE /xnfe/if_nfe_imp_issqn_400_s,
+        ls_nfe_imposto_pis                   TYPE /xnfe/if_nfe_imposto_pis_s,
+        ls_nfe_imposto_pisst                 TYPE /xnfe/if_nfe_imposto_pisst_s,
+        ls_nfe_imposto_cofins                TYPE /xnfe/if_nfe_imposto_cofins_s,
+        ls_nfe_imposto_cofinsst              TYPE /xnfe/if_nfe_imposto_cofinst_s,
+        ls_nfe_imposto_icmsufdest            TYPE /xnfe/if_nfe_imp_icmsufd_400_s.
+
+  FIELD-SYMBOLS: <content>                   TYPE /xnfe/input_mapping,
+                 <detimposto>                TYPE /xnfe/009_nfe_b_nfe_batch_ob85,
+                 <choice>                    TYPE /xnfe/009_nfe_b_nfe_batch_ob47,
+                 <ls_nfe_ide>                TYPE /xnfe/if_nfe_ide_400_s,
+                 <lt_nfe_imposto_icms>       TYPE /xnfe/if_nfe_imposto_icms_400t,
+                 <lt_nfe_imposto_ipi>        TYPE /xnfe/if_nfe_imposto_ipi_400_t,
+                 <lt_nfe_imposto_ii>         TYPE /xnfe/if_nfe_imposto_ii_t,
+                 <lt_nfe_imposto_issqn>      TYPE /xnfe/if_nfe_imp_issqn_400_t,
+                 <pis>                       TYPE /xnfe/009_nfe_b_nfe_batch_o115,
+                 <lt_nfe_imposto_pis>        TYPE /xnfe/if_nfe_imposto_pis_t,
+                 <pisst>                     TYPE /xnfe/009_nfe_b_nfe_batch_o205,
+                 <lt_nfe_imposto_pisst>      TYPE /xnfe/if_nfe_imposto_pisst_t,
+                 <cofins>                    TYPE /xnfe/009_nfe_b_nfe_batch_ob27,
+                 <lt_nfe_imposto_cofins>     TYPE /xnfe/if_nfe_imposto_cofins_t,
+                 <cofinsst>                  TYPE /xnfe/009_nfe_b_nfe_batch_o216,
+                 <lt_nfe_imposto_cofinsst>   TYPE /xnfe/if_nfe_imposto_cofinst_t,
+                 <icmsufdest>                TYPE /xnfe/009_nfe_b_nfe_batch_o209,
+                 <lt_nfe_imposto_icmsufdest> TYPE /xnfe/if_nfe_imp_icmsufd_400_t,
+                 <proxystruc>                TYPE any.
+
+
+  UNASSIGN <content>.
+  READ TABLE me->mt_content WITH KEY param_name = 'IS_NFE_IDE' ASSIGNING <content>.
+  ASSIGN <content>-param_value->* TO <ls_nfe_ide>.
+  lv_ind_final = <ls_nfe_ide>-ind_final.
+
+  ASSIGN me->ms_inf_nfe_detimposto->* TO <detimposto>.
+  CLEAR: <detimposto>.
+
+  UNASSIGN <content>.
+  READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_IMPOSTO_ICMS' ASSIGNING <content>.
+  ASSIGN <content>-param_value->* TO <lt_nfe_imposto_icms>.
+  ASSIGN COMPONENT 'CHOICE' OF STRUCTURE <detimposto> TO <choice>.
+
+** imposto
+  IF NOT is_nfe_det_imposto-vtottrib IS INITIAL.              "Just skip it when initial (info from Brazil)
+    <detimposto>-v_tot_trib = is_nfe_det_imposto-vtottrib.
+  ENDIF.
+  IF NOT is_nfe_det_imposto-icms_ref IS INITIAL.
+    <choice>-selection = 'SEQUENCE'.
+*** ICMS
+    READ TABLE <lt_nfe_imposto_icms> INTO ls_nfe_imposto_icms
+       WITH KEY id =  is_nfe_det_imposto-icms_ref.
+    IF sy-subrc <> 0.
+      MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_ICMS' INTO lv_dummy. "#EC NOTEXT
+      me->append_error( ).
+    ELSE.
+**** ICMS00
+      IF ls_nfe_imposto_icms-cst = '00'.
+        <choice>-sequence-icms-choice-selection = 'ICMS00'.
+        <choice>-sequence-icms-choice-icms00-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms00-cst = ls_nfe_imposto_icms-cst.
+        <choice>-sequence-icms-choice-icms00-mod_bc = ls_nfe_imposto_icms-mod_bc.
+        <choice>-sequence-icms-choice-icms00-v_bc = ls_nfe_imposto_icms-v_bc.
+        <choice>-sequence-icms-choice-icms00-p_icms = ls_nfe_imposto_icms-p_icms.
+        <choice>-sequence-icms-choice-icms00-v_icms = ls_nfe_imposto_icms-v_icms.
+        IF NOT ls_nfe_imposto_icms-p_fcp IS INITIAL.
+          <choice>-sequence-icms-choice-icms00-sequence-p_fcp =  ls_nfe_imposto_icms-p_fcp.
+          <choice>-sequence-icms-choice-icms00-sequence-v_fcp = ls_nfe_imposto_icms-v_fcp.
+        ENDIF.
+**** ICMS02
+      ELSEIF ls_nfe_imposto_icms-cst = '02'.
+        <choice>-sequence-icms-choice-selection = 'ICMS02'.
+        <choice>-sequence-icms-choice-icms02-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms02-cst = ls_nfe_imposto_icms-cst.
+        IF NOT ls_nfe_imposto_icms-q_bcmono IS INITIAL.  "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icms02-q_bcmono = ls_nfe_imposto_icms-q_bcmono.
+        ENDIF.
+        <choice>-sequence-icms-choice-icms02-ad_rem_icms = ls_nfe_imposto_icms-ad_rem_icms.
+        <choice>-sequence-icms-choice-icms02-v_icmsmono = ls_nfe_imposto_icms-v_icmsmono.
+**** ICMS10
+      ELSEIF ls_nfe_imposto_icms-cst = '10'
+          AND ls_nfe_imposto_icms-ufst IS INITIAL.
+        <choice>-sequence-icms-choice-selection = 'ICMS10'.
+        <choice>-sequence-icms-choice-icms10-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms10-cst = ls_nfe_imposto_icms-cst.
+        <choice>-sequence-icms-choice-icms10-mod_bc = ls_nfe_imposto_icms-mod_bc.
+        <choice>-sequence-icms-choice-icms10-v_bc = ls_nfe_imposto_icms-v_bc.
+        <choice>-sequence-icms-choice-icms10-p_icms = ls_nfe_imposto_icms-p_icms.
+        <choice>-sequence-icms-choice-icms10-v_icms = ls_nfe_imposto_icms-v_icms.
+        IF NOT ls_nfe_imposto_icms-p_fcp IS INITIAL.                       "could not be initial (info from Brazil)
+          <choice>-sequence-icms-choice-icms10-sequence-v_bcfcp = ls_nfe_imposto_icms-v_bcfcp.
+          <choice>-sequence-icms-choice-icms10-sequence-p_fcp = ls_nfe_imposto_icms-p_fcp.
+          <choice>-sequence-icms-choice-icms10-sequence-v_fcp = ls_nfe_imposto_icms-v_fcp.
+        ENDIF.
+        <choice>-sequence-icms-choice-icms10-mod_bcst = ls_nfe_imposto_icms-mod_bcst.
+        IF NOT ls_nfe_imposto_icms-p_mvast IS INITIAL OR ls_nfe_imposto_icms-mod_bcst = '4'. "skip when initial and mod_bcst<>4(info from Brazil)
+          <choice>-sequence-icms-choice-icms10-p_mvast = ls_nfe_imposto_icms-p_mvast.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_red_bcst IS INITIAL.                   "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icms10-p_red_bcst = ls_nfe_imposto_icms-p_red_bcst.
+        ENDIF.
+        <choice>-sequence-icms-choice-icms10-v_bcst = ls_nfe_imposto_icms-v_bcst.
+        <choice>-sequence-icms-choice-icms10-p_icmsst = ls_nfe_imposto_icms-p_icmsst.
+        <choice>-sequence-icms-choice-icms10-v_icmsst = ls_nfe_imposto_icms-v_icmsst.
+        IF NOT ls_nfe_imposto_icms-p_fcpst IS INITIAL.                       "could not be initial (info from Brazil)
+          <choice>-sequence-icms-choice-icms10-sequence1-v_bcfcpst = ls_nfe_imposto_icms-v_bcfcpst.
+          <choice>-sequence-icms-choice-icms10-sequence1-p_fcpst = ls_nfe_imposto_icms-p_fcpst.
+          <choice>-sequence-icms-choice-icms10-sequence1-v_fcpst = ls_nfe_imposto_icms-v_fcpst.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-mot_des_icmsst IS INITIAL.
+          <choice>-sequence-icms-choice-icms10-sequence2-v_icmsstdeson = ls_nfe_imposto_icms-v_icmsstdeson.
+          <choice>-sequence-icms-choice-icms10-sequence2-mot_des_icmsst = ls_nfe_imposto_icms-mot_des_icmsst.
+        ENDIF.
+**** ICMS15
+      ELSEIF ls_nfe_imposto_icms-cst = '15'.
+        <choice>-sequence-icms-choice-selection = 'ICMS15'.
+        <choice>-sequence-icms-choice-icms15-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms15-cst = ls_nfe_imposto_icms-cst.
+        IF NOT ls_nfe_imposto_icms-q_bcmono IS INITIAL.  "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icms15-q_bcmono = ls_nfe_imposto_icms-q_bcmono.
+        ENDIF.
+        <choice>-sequence-icms-choice-icms15-ad_rem_icms = ls_nfe_imposto_icms-ad_rem_icms.
+        <choice>-sequence-icms-choice-icms15-v_icmsmono = ls_nfe_imposto_icms-v_icmsmono.
+        IF NOT ls_nfe_imposto_icms-q_bcmono_reten IS INITIAL.  "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icms15-q_bcmono_reten = ls_nfe_imposto_icms-q_bcmono_reten.
+        ENDIF.
+        <choice>-sequence-icms-choice-icms15-ad_rem_icmsreten = ls_nfe_imposto_icms-ad_rem_icmsreten.
+        <choice>-sequence-icms-choice-icms15-v_icmsmono_reten = ls_nfe_imposto_icms-v_icmsmono_reten.
+        IF NOT ls_nfe_imposto_icms-mot_red_ad_rem IS INITIAL.  "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icms15-sequence-p_red_ad_rem = ls_nfe_imposto_icms-p_red_ad_rem.
+          <choice>-sequence-icms-choice-icms15-sequence-mot_red_ad_rem = ls_nfe_imposto_icms-mot_red_ad_rem.
+        ENDIF.
+**** ICMS20
+      ELSEIF ls_nfe_imposto_icms-cst = '20'.
+        <choice>-sequence-icms-choice-selection = 'ICMS20'.
+        <choice>-sequence-icms-choice-icms20-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms20-cst = ls_nfe_imposto_icms-cst.
+        <choice>-sequence-icms-choice-icms20-mod_bc = ls_nfe_imposto_icms-mod_bc.
+        <choice>-sequence-icms-choice-icms20-p_red_bc = ls_nfe_imposto_icms-p_red_bc.
+        <choice>-sequence-icms-choice-icms20-v_bc = ls_nfe_imposto_icms-v_bc.
+        <choice>-sequence-icms-choice-icms20-p_icms = ls_nfe_imposto_icms-p_icms.
+        <choice>-sequence-icms-choice-icms20-v_icms = ls_nfe_imposto_icms-v_icms.
+        IF NOT ls_nfe_imposto_icms-p_fcp IS INITIAL.
+          <choice>-sequence-icms-choice-icms20-sequence-v_bcfcp = ls_nfe_imposto_icms-v_bcfcp.
+          <choice>-sequence-icms-choice-icms20-sequence-p_fcp = ls_nfe_imposto_icms-p_fcp.
+          <choice>-sequence-icms-choice-icms20-sequence-v_fcp = ls_nfe_imposto_icms-v_fcp.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-mot_des_icms IS INITIAL.
+          <choice>-sequence-icms-choice-icms20-sequence1-v_icmsdeson = ls_nfe_imposto_icms-v_icmsdeson.
+          <choice>-sequence-icms-choice-icms20-sequence1-mot_des_icms = ls_nfe_imposto_icms-mot_des_icms.
+          IF NOT ls_nfe_imposto_icms-ind_deduz_deson IS INITIAL.
+            <choice>-sequence-icms-choice-icms20-sequence1-ind_deduz_deson = ls_nfe_imposto_icms-ind_deduz_deson.
+          ENDIF.
+        ENDIF.
+**** ICMS30
+      ELSEIF ls_nfe_imposto_icms-cst = '30'.
+        <choice>-sequence-icms-choice-selection = 'ICMS30'.
+        <choice>-sequence-icms-choice-icms30-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms30-cst = ls_nfe_imposto_icms-cst.
+        <choice>-sequence-icms-choice-icms30-mod_bcst = ls_nfe_imposto_icms-mod_bcst.
+        IF NOT ls_nfe_imposto_icms-p_mvast IS INITIAL OR ls_nfe_imposto_icms-mod_bcst = '4'. "skip when initial and mod_bcst<>4(info from Brazil)
+          <choice>-sequence-icms-choice-icms30-p_mvast = ls_nfe_imposto_icms-p_mvast.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_red_bcst IS INITIAL.                 "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icms30-p_red_bcst = ls_nfe_imposto_icms-p_red_bcst.
+        ENDIF.
+        <choice>-sequence-icms-choice-icms30-v_bcst = ls_nfe_imposto_icms-v_bcst.
+        <choice>-sequence-icms-choice-icms30-p_icmsst = ls_nfe_imposto_icms-p_icmsst.
+        <choice>-sequence-icms-choice-icms30-v_icmsst = ls_nfe_imposto_icms-v_icmsst.
+        IF NOT ls_nfe_imposto_icms-p_fcpst IS INITIAL.
+          <choice>-sequence-icms-choice-icms30-sequence-v_bcfcpst = ls_nfe_imposto_icms-v_bcfcpst.
+          <choice>-sequence-icms-choice-icms30-sequence-p_fcpst = ls_nfe_imposto_icms-p_fcpst.
+          <choice>-sequence-icms-choice-icms30-sequence-v_fcpst = ls_nfe_imposto_icms-v_fcpst.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-mot_des_icms IS INITIAL.
+          <choice>-sequence-icms-choice-icms30-sequence1-v_icmsdeson = ls_nfe_imposto_icms-v_icmsdeson.
+          <choice>-sequence-icms-choice-icms30-sequence1-mot_des_icms = ls_nfe_imposto_icms-mot_des_icms.
+          IF NOT ls_nfe_imposto_icms-ind_deduz_deson IS INITIAL.
+            <choice>-sequence-icms-choice-icms30-sequence1-ind_deduz_deson = ls_nfe_imposto_icms-ind_deduz_deson.
+          ENDIF.
+        ENDIF.
+**** ICMS40
+      ELSEIF ls_nfe_imposto_icms-cst = '40'
+        OR ls_nfe_imposto_icms-cst = '41'
+        AND ls_nfe_imposto_icms-v_bcstret IS INITIAL
+        OR ls_nfe_imposto_icms-cst = '50'.
+        <choice>-sequence-icms-choice-selection = 'ICMS40'.
+        <choice>-sequence-icms-choice-icms40-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms40-cst = ls_nfe_imposto_icms-cst.
+        IF NOT ls_nfe_imposto_icms-mot_des_icms IS INITIAL.
+          <choice>-sequence-icms-choice-icms40-sequence-v_icmsdeson = ls_nfe_imposto_icms-v_icmsdeson.
+          <choice>-sequence-icms-choice-icms40-sequence-mot_des_icms = ls_nfe_imposto_icms-mot_des_icms.
+          IF NOT ls_nfe_imposto_icms-ind_deduz_deson IS INITIAL.
+            <choice>-sequence-icms-choice-icms40-sequence-ind_deduz_deson = ls_nfe_imposto_icms-ind_deduz_deson.
+          ENDIF.
+        ENDIF.
+**** ICMS51
+      ELSEIF ls_nfe_imposto_icms-cst = '51'.
+        <choice>-sequence-icms-choice-selection = 'ICMS51'.
+        <choice>-sequence-icms-choice-icms51-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms51-cst = ls_nfe_imposto_icms-cst.
+        <choice>-sequence-icms-choice-icms51-mod_bc = ls_nfe_imposto_icms-mod_bc.          "even if initial - NT2019.001v1.10 (info from Brazil)
+        <choice>-sequence-icms-choice-icms51-p_red_bc = ls_nfe_imposto_icms-p_red_bc.      "even if initial - NT2019.001v1.10 (info from Brazil)
+        IF NOT ls_nfe_imposto_icms-c_benef_rbc IS INITIAL.
+          <choice>-sequence-icms-choice-icms51-c_benef_rbc = ls_nfe_imposto_icms-c_benef_rbc.
+        ENDIF.
+        <choice>-sequence-icms-choice-icms51-v_bc = ls_nfe_imposto_icms-v_bc.              "even if initial - NT2019.001v1.10 (info from Brazil)
+        <choice>-sequence-icms-choice-icms51-p_icms = ls_nfe_imposto_icms-p_icms.          "even if initial - NT2019.001v1.10 (info from Brazil)
+        <choice>-sequence-icms-choice-icms51-v_icmsop = ls_nfe_imposto_icms-v_icmsop.      "even if initial - NT2019.001v1.10 (info from Brazil)
+        <choice>-sequence-icms-choice-icms51-p_dif = ls_nfe_imposto_icms-p_dif.            "even if initial - NT2019.001v1.10 (info from Brazil)
+        <choice>-sequence-icms-choice-icms51-v_icmsdif = ls_nfe_imposto_icms-v_icmsdif.    "even if initial - NT2019.001v1.10 (info from Brazil)
+        <choice>-sequence-icms-choice-icms51-v_icms = ls_nfe_imposto_icms-v_icms.          "even if initial - NT2019.001v1.10 (info from Brazil)
+        IF NOT ls_nfe_imposto_icms-p_fcp IS INITIAL.
+          <choice>-sequence-icms-choice-icms51-sequence-v_bcfcp = ls_nfe_imposto_icms-v_bcfcp.
+          <choice>-sequence-icms-choice-icms51-sequence-p_fcp = ls_nfe_imposto_icms-p_fcp.
+          <choice>-sequence-icms-choice-icms51-sequence-v_fcp = ls_nfe_imposto_icms-v_fcp.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_fcpdif IS INITIAL.
+          <choice>-sequence-icms-choice-icms51-sequence1-p_fcpdif = ls_nfe_imposto_icms-p_fcpdif.
+          <choice>-sequence-icms-choice-icms51-sequence1-v_fcpdif = ls_nfe_imposto_icms-v_fcpdif.
+          <choice>-sequence-icms-choice-icms51-sequence1-v_fcpefet = ls_nfe_imposto_icms-v_fcpefet.
+        ENDIF.
+**** ICMS53
+      ELSEIF ls_nfe_imposto_icms-cst = '53'.
+        <choice>-sequence-icms-choice-selection = 'ICMS53'.
+        <choice>-sequence-icms-choice-icms53-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms53-cst = ls_nfe_imposto_icms-cst.
+        IF NOT ls_nfe_imposto_icms-q_bcmono IS INITIAL.  "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icms53-q_bcmono = ls_nfe_imposto_icms-q_bcmono.
+        ENDIF.
+        <choice>-sequence-icms-choice-icms53-ad_rem_icms = ls_nfe_imposto_icms-ad_rem_icms.
+        <choice>-sequence-icms-choice-icms53-v_icmsmono_op = ls_nfe_imposto_icms-v_icmsmono_op.
+        <choice>-sequence-icms-choice-icms53-p_dif = ls_nfe_imposto_icms-p_dif.
+        <choice>-sequence-icms-choice-icms53-v_icmsmono_dif = ls_nfe_imposto_icms-v_icmsmono_dif.
+        <choice>-sequence-icms-choice-icms53-v_icmsmono = ls_nfe_imposto_icms-v_icmsmono.
+**** ICMS60
+      ELSEIF ls_nfe_imposto_icms-cst = '60' AND
+        ls_nfe_imposto_icms-v_bcstdest IS INITIAL.
+        <choice>-sequence-icms-choice-selection = 'ICMS60'.
+        <choice>-sequence-icms-choice-icms60-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms60-cst = ls_nfe_imposto_icms-cst.
+        IF NOT ls_nfe_imposto_icms-v_bcstret IS INITIAL                  "Just skip when initial for all (info from Brazil)
+           OR NOT ls_nfe_imposto_icms-v_icmsstret IS INITIAL
+           OR NOT ls_nfe_imposto_icms-p_st IS INITIAL.
+          <choice>-sequence-icms-choice-icms60-sequence-v_bcstret = ls_nfe_imposto_icms-v_bcstret.
+          <choice>-sequence-icms-choice-icms60-sequence-p_st = ls_nfe_imposto_icms-p_st.
+          IF lv_ind_final = '0'.
+            <choice>-sequence-icms-choice-icms60-sequence-v_icmssubstituto = ls_nfe_imposto_icms-v_icmssubstituto.
+          ELSE. "additional check for final consumer
+            IF NOT ls_nfe_imposto_icms-v_icmssubstituto IS INITIAL.
+              <choice>-sequence-icms-choice-icms60-sequence-v_icmssubstituto = ls_nfe_imposto_icms-v_icmssubstituto.
+            ENDIF.
+          ENDIF.
+          <choice>-sequence-icms-choice-icms60-sequence-v_icmsstret = ls_nfe_imposto_icms-v_icmsstret.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_fcpstret IS INITIAL.
+          <choice>-sequence-icms-choice-icms60-sequence1-v_bcfcpstret = ls_nfe_imposto_icms-v_bcfcpstret.
+          <choice>-sequence-icms-choice-icms60-sequence1-p_fcpstret   = ls_nfe_imposto_icms-p_fcpstret.
+          <choice>-sequence-icms-choice-icms60-sequence1-v_fcpstret   = ls_nfe_imposto_icms-v_fcpstret.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_icmsefet IS INITIAL.
+          <choice>-sequence-icms-choice-icms60-sequence2-p_red_bcefet = ls_nfe_imposto_icms-p_red_bcefet.
+          <choice>-sequence-icms-choice-icms60-sequence2-v_bcefet   = ls_nfe_imposto_icms-v_bcefet.
+          <choice>-sequence-icms-choice-icms60-sequence2-p_icmsefet   = ls_nfe_imposto_icms-p_icmsefet.
+          <choice>-sequence-icms-choice-icms60-sequence2-v_icmsefet   = ls_nfe_imposto_icms-v_icmsefet.
+        ENDIF.
+**** ICMS61
+      ELSEIF ls_nfe_imposto_icms-cst = '61'.
+        <choice>-sequence-icms-choice-selection = 'ICMS61'.
+        <choice>-sequence-icms-choice-icms61-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms61-cst = ls_nfe_imposto_icms-cst.
+        IF NOT ls_nfe_imposto_icms-q_bcmono_ret IS INITIAL.  "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icms61-q_bcmono_ret = ls_nfe_imposto_icms-q_bcmono_ret.
+        ENDIF.
+        <choice>-sequence-icms-choice-icms61-ad_rem_icmsret = ls_nfe_imposto_icms-ad_rem_icmsret.
+        <choice>-sequence-icms-choice-icms61-v_icmsmono_ret = ls_nfe_imposto_icms-v_icmsmono_ret.
+**** ICMS70
+      ELSEIF ls_nfe_imposto_icms-cst = '70'.
+        <choice>-sequence-icms-choice-selection = 'ICMS70'.
+        <choice>-sequence-icms-choice-icms70-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms70-cst = ls_nfe_imposto_icms-cst.
+        <choice>-sequence-icms-choice-icms70-mod_bc = ls_nfe_imposto_icms-mod_bc.
+        <choice>-sequence-icms-choice-icms70-p_red_bc = ls_nfe_imposto_icms-p_red_bc.
+        <choice>-sequence-icms-choice-icms70-v_bc = ls_nfe_imposto_icms-v_bc.
+        <choice>-sequence-icms-choice-icms70-p_icms = ls_nfe_imposto_icms-p_icms.
+        <choice>-sequence-icms-choice-icms70-v_icms = ls_nfe_imposto_icms-v_icms.
+        IF NOT ls_nfe_imposto_icms-p_fcp IS INITIAL.
+          <choice>-sequence-icms-choice-icms70-sequence-v_bcfcp = ls_nfe_imposto_icms-v_bcfcp.
+          <choice>-sequence-icms-choice-icms70-sequence-p_fcp = ls_nfe_imposto_icms-p_fcp.
+          <choice>-sequence-icms-choice-icms70-sequence-v_fcp = ls_nfe_imposto_icms-v_fcp.
+        ENDIF.
+        <choice>-sequence-icms-choice-icms70-mod_bcst = ls_nfe_imposto_icms-mod_bcst.
+        IF NOT ls_nfe_imposto_icms-p_mvast IS INITIAL OR ls_nfe_imposto_icms-mod_bcst = '4'. "skip when initial and mod_bcst<>4(info from Brazil)
+          <choice>-sequence-icms-choice-icms70-p_mvast = ls_nfe_imposto_icms-p_mvast.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_red_bcst IS INITIAL.                 "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icms70-p_red_bcst = ls_nfe_imposto_icms-p_red_bcst.
+        ENDIF.
+        <choice>-sequence-icms-choice-icms70-v_bcst = ls_nfe_imposto_icms-v_bcst.
+        <choice>-sequence-icms-choice-icms70-p_icmsst = ls_nfe_imposto_icms-p_icmsst.
+        <choice>-sequence-icms-choice-icms70-v_icmsst = ls_nfe_imposto_icms-v_icmsst.
+        IF NOT ls_nfe_imposto_icms-p_fcpst IS INITIAL.
+          <choice>-sequence-icms-choice-icms70-sequence1-v_bcfcpst = ls_nfe_imposto_icms-v_bcfcpst.
+          <choice>-sequence-icms-choice-icms70-sequence1-p_fcpst = ls_nfe_imposto_icms-p_fcpst.
+          <choice>-sequence-icms-choice-icms70-sequence1-v_fcpst = ls_nfe_imposto_icms-v_fcpst.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-mot_des_icms IS INITIAL.
+          <choice>-sequence-icms-choice-icms70-sequence2-v_icmsdeson = ls_nfe_imposto_icms-v_icmsdeson.
+          <choice>-sequence-icms-choice-icms70-sequence2-mot_des_icms = ls_nfe_imposto_icms-mot_des_icms.
+          IF NOT ls_nfe_imposto_icms-ind_deduz_deson IS INITIAL.
+            <choice>-sequence-icms-choice-icms70-sequence2-ind_deduz_deson = ls_nfe_imposto_icms-ind_deduz_deson.
+          ENDIF.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-mot_des_icmsst IS INITIAL.
+          <choice>-sequence-icms-choice-icms70-sequence3-v_icmsstdeson = ls_nfe_imposto_icms-v_icmsstdeson.
+          <choice>-sequence-icms-choice-icms70-sequence3-mot_des_icmsst = ls_nfe_imposto_icms-mot_des_icmsst.
+        ENDIF.
+**** ICMS90
+      ELSEIF ls_nfe_imposto_icms-cst = '90'
+         AND ls_nfe_imposto_icms-ufst IS INITIAL.
+        <choice>-sequence-icms-choice-selection = 'ICMS90'.
+        <choice>-sequence-icms-choice-icms90-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icms90-cst = ls_nfe_imposto_icms-cst.
+        IF NOT ls_nfe_imposto_icms-mod_bc IS INITIAL.
+          <choice>-sequence-icms-choice-icms90-sequence-mod_bc = ls_nfe_imposto_icms-mod_bc.
+          <choice>-sequence-icms-choice-icms90-sequence-v_bc = ls_nfe_imposto_icms-v_bc.
+          <choice>-sequence-icms-choice-icms90-sequence-p_red_bc = ls_nfe_imposto_icms-p_red_bc. "even if initial - NT2019.001v1.10 (info from Brazil)
+          <choice>-sequence-icms-choice-icms90-sequence-p_icms = ls_nfe_imposto_icms-p_icms.
+          <choice>-sequence-icms-choice-icms90-sequence-v_icms = ls_nfe_imposto_icms-v_icms.
+          IF NOT ls_nfe_imposto_icms-p_fcp IS INITIAL.
+            <choice>-sequence-icms-choice-icms90-sequence-sequence-v_bcfcp = ls_nfe_imposto_icms-v_bcfcp.
+            <choice>-sequence-icms-choice-icms90-sequence-sequence-p_fcp = ls_nfe_imposto_icms-p_fcp.
+            <choice>-sequence-icms-choice-icms90-sequence-sequence-v_fcp = ls_nfe_imposto_icms-v_fcp.
+          ENDIF.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-mod_bcst IS INITIAL.
+          <choice>-sequence-icms-choice-icms90-sequence1-mod_bcst = ls_nfe_imposto_icms-mod_bcst.
+          IF NOT ls_nfe_imposto_icms-p_mvast IS INITIAL OR ls_nfe_imposto_icms-mod_bcst = '4'. "skip when initial and mod_bcst<>4(info from Brazil)
+            <choice>-sequence-icms-choice-icms90-sequence1-p_mvast = ls_nfe_imposto_icms-p_mvast.
+          ENDIF.
+          <choice>-sequence-icms-choice-icms90-sequence1-p_red_bcst = ls_nfe_imposto_icms-p_red_bcst. "even if initial - NT2019.001v1.10 (info from Brazil)
+          <choice>-sequence-icms-choice-icms90-sequence1-v_bcst = ls_nfe_imposto_icms-v_bcst.
+          <choice>-sequence-icms-choice-icms90-sequence1-p_icmsst = ls_nfe_imposto_icms-p_icmsst.
+          <choice>-sequence-icms-choice-icms90-sequence1-v_icmsst = ls_nfe_imposto_icms-v_icmsst.
+
+          IF NOT ls_nfe_imposto_icms-p_fcpst IS INITIAL.
+            <choice>-sequence-icms-choice-icms90-sequence1-sequence-v_bcfcpst = ls_nfe_imposto_icms-v_bcfcpst.
+            <choice>-sequence-icms-choice-icms90-sequence1-sequence-p_fcpst = ls_nfe_imposto_icms-p_fcpst.
+            <choice>-sequence-icms-choice-icms90-sequence1-sequence-v_fcpst = ls_nfe_imposto_icms-v_fcpst.
+          ENDIF.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-mot_des_icms IS INITIAL.
+          <choice>-sequence-icms-choice-icms90-sequence2-v_icmsdeson = ls_nfe_imposto_icms-v_icmsdeson.
+          <choice>-sequence-icms-choice-icms90-sequence2-mot_des_icms = ls_nfe_imposto_icms-mot_des_icms.
+          IF NOT ls_nfe_imposto_icms-ind_deduz_deson IS INITIAL.
+            <choice>-sequence-icms-choice-icms90-sequence2-ind_deduz_deson = ls_nfe_imposto_icms-ind_deduz_deson.
+          ENDIF.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-mot_des_icmsst IS INITIAL.
+          <choice>-sequence-icms-choice-icms90-sequence3-v_icmsstdeson = ls_nfe_imposto_icms-v_icmsstdeson.
+          <choice>-sequence-icms-choice-icms90-sequence3-mot_des_icmsst = ls_nfe_imposto_icms-mot_des_icmsst.
+        ENDIF.
+**** ICMSPart
+      ELSEIF ls_nfe_imposto_icms-cst = '10'
+        OR ls_nfe_imposto_icms-cst = '90'
+        AND NOT ls_nfe_imposto_icms-ufst IS INITIAL.
+        <choice>-sequence-icms-choice-selection = 'ICMSPART'.
+        <choice>-sequence-icms-choice-icmspart-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icmspart-cst = ls_nfe_imposto_icms-cst.
+        <choice>-sequence-icms-choice-icmspart-mod_bc = ls_nfe_imposto_icms-mod_bc.
+        <choice>-sequence-icms-choice-icmspart-v_bc = ls_nfe_imposto_icms-v_bc.
+        IF NOT ls_nfe_imposto_icms-p_red_bc IS INITIAL.                  "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icmspart-p_red_bc = ls_nfe_imposto_icms-p_red_bc.
+        ENDIF.
+        <choice>-sequence-icms-choice-icmspart-p_icms = ls_nfe_imposto_icms-p_icms.
+        <choice>-sequence-icms-choice-icmspart-v_icms = ls_nfe_imposto_icms-v_icms.
+        <choice>-sequence-icms-choice-icmspart-mod_bcst = ls_nfe_imposto_icms-mod_bcst.
+        IF NOT ls_nfe_imposto_icms-p_mvast IS INITIAL OR ls_nfe_imposto_icms-mod_bcst = '4'. "skip when initial and mod_bcst<>4(info from Brazil)
+          <choice>-sequence-icms-choice-icmspart-p_mvast = ls_nfe_imposto_icms-p_mvast.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_red_bcst IS INITIAL.                 "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icmspart-p_red_bcst = ls_nfe_imposto_icms-p_red_bcst.
+        ENDIF.
+        <choice>-sequence-icms-choice-icmspart-v_bcst = ls_nfe_imposto_icms-v_bcst.
+        <choice>-sequence-icms-choice-icmspart-p_icmsst = ls_nfe_imposto_icms-p_icmsst.
+        <choice>-sequence-icms-choice-icmspart-v_icmsst = ls_nfe_imposto_icms-v_icmsst.
+        IF NOT ls_nfe_imposto_icms-p_fcpst IS INITIAL.
+          <choice>-sequence-icms-choice-icmspart-sequence-v_bcfcpst = ls_nfe_imposto_icms-v_bcfcpst.
+          <choice>-sequence-icms-choice-icmspart-sequence-p_fcpst   = ls_nfe_imposto_icms-p_fcpst.
+          <choice>-sequence-icms-choice-icmspart-sequence-v_fcpst   = ls_nfe_imposto_icms-v_fcpst.
+        ENDIF.
+        <choice>-sequence-icms-choice-icmspart-p_bcop = ls_nfe_imposto_icms-p_bcop.
+        <choice>-sequence-icms-choice-icmspart-ufst = ls_nfe_imposto_icms-ufst.
+**** ICMSST
+      ELSEIF ls_nfe_imposto_icms-cst = '41'
+        OR ls_nfe_imposto_icms-cst = '60'
+        AND NOT ls_nfe_imposto_icms-v_bcstdest IS INITIAL.              "value for "V_BCSTDEST" must be >0(info from Brazil)
+        <choice>-sequence-icms-choice-selection = 'ICMSST'.
+        <choice>-sequence-icms-choice-icmsst-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icmsst-cst = ls_nfe_imposto_icms-cst.
+        <choice>-sequence-icms-choice-icmsst-v_bcstret = ls_nfe_imposto_icms-v_bcstret.
+        IF ls_nfe_imposto_icms-cst = '60' and lv_ind_final = '0'.
+          <choice>-sequence-icms-choice-icmsst-p_st = ls_nfe_imposto_icms-p_st.
+        ELSE. "additional check for final consumer
+          IF NOT ls_nfe_imposto_icms-p_st IS INITIAL.
+            <choice>-sequence-icms-choice-icmsst-p_st = ls_nfe_imposto_icms-p_st.
+          ENDIF.
+        ENDIF.
+        IF ls_nfe_imposto_icms-cst = '60' and lv_ind_final = '0'.
+          <choice>-sequence-icms-choice-icmsst-v_icmssubstituto = ls_nfe_imposto_icms-v_icmssubstituto.
+        ELSE. "additional check for final consumer
+          IF NOT ls_nfe_imposto_icms-v_icmssubstituto IS INITIAL.
+            <choice>-sequence-icms-choice-icmsst-v_icmssubstituto = ls_nfe_imposto_icms-v_icmssubstituto.
+          ENDIF.
+        ENDIF.
+        <choice>-sequence-icms-choice-icmsst-v_icmsstret = ls_nfe_imposto_icms-v_icmsstret.
+        <choice>-sequence-icms-choice-icmsst-v_bcstdest = ls_nfe_imposto_icms-v_bcstdest.
+        <choice>-sequence-icms-choice-icmsst-v_icmsstdest = ls_nfe_imposto_icms-v_icmsstdest.
+        IF NOT ls_nfe_imposto_icms-p_fcpstret IS INITIAL.
+          <choice>-sequence-icms-choice-icmsst-sequence-v_bcfcpstret = ls_nfe_imposto_icms-v_bcfcpstret.
+          <choice>-sequence-icms-choice-icmsst-sequence-p_fcpstret = ls_nfe_imposto_icms-p_fcpstret.
+          <choice>-sequence-icms-choice-icmsst-sequence-v_fcpstret = ls_nfe_imposto_icms-v_fcpstret.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_icmsefet IS INITIAL.
+          <choice>-sequence-icms-choice-icmsst-sequence1-p_red_bcefet = ls_nfe_imposto_icms-p_red_bcefet.
+          <choice>-sequence-icms-choice-icmsst-sequence1-v_bcefet     = ls_nfe_imposto_icms-v_bcefet.
+          <choice>-sequence-icms-choice-icmsst-sequence1-p_icmsefet   = ls_nfe_imposto_icms-p_icmsefet.
+          <choice>-sequence-icms-choice-icmsst-sequence1-v_icmsefet   = ls_nfe_imposto_icms-v_icmsefet.
+        ENDIF.
+**** ICMSSN101
+      ELSEIF ls_nfe_imposto_icms-csosn = '101'.
+        <choice>-sequence-icms-choice-selection = 'ICMSSN101'.
+        <choice>-sequence-icms-choice-icmssn101-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icmssn101-csosn = ls_nfe_imposto_icms-csosn.
+        <choice>-sequence-icms-choice-icmssn101-p_cred_sn = ls_nfe_imposto_icms-p_cred_sn.
+        <choice>-sequence-icms-choice-icmssn101-v_cred_icmssn = ls_nfe_imposto_icms-v_cred_icmssn.
+**** ICMSSN102
+      ELSEIF ls_nfe_imposto_icms-csosn = '102'
+        OR ls_nfe_imposto_icms-csosn = '103'
+        OR ls_nfe_imposto_icms-csosn = '300'
+        OR ls_nfe_imposto_icms-csosn = '400'.
+        <choice>-sequence-icms-choice-selection = 'ICMSSN102'.
+        IF NOT ls_nfe_imposto_icms-orig IS INITIAL.  "optional with NF-e NT2024.001
+          <choice>-sequence-icms-choice-icmssn102-orig = ls_nfe_imposto_icms-orig.
+        ENDIF.
+        <choice>-sequence-icms-choice-icmssn102-csosn = ls_nfe_imposto_icms-csosn.
+**** ICMSSN201
+      ELSEIF ls_nfe_imposto_icms-csosn = '201'.
+        <choice>-sequence-icms-choice-selection = 'ICMSSN201'.
+        <choice>-sequence-icms-choice-icmssn201-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icmssn201-csosn = ls_nfe_imposto_icms-csosn.
+        <choice>-sequence-icms-choice-icmssn201-mod_bcst = ls_nfe_imposto_icms-mod_bcst.
+        IF NOT ls_nfe_imposto_icms-p_mvast IS INITIAL OR ls_nfe_imposto_icms-mod_bcst = '4'. "skip when initial and mod_bcst<>4(info from Brazil)
+          <choice>-sequence-icms-choice-icmssn201-p_mvast = ls_nfe_imposto_icms-p_mvast.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_red_bcst IS INITIAL.
+          <choice>-sequence-icms-choice-icmssn201-p_red_bcst = ls_nfe_imposto_icms-p_red_bcst.
+        ENDIF.
+        <choice>-sequence-icms-choice-icmssn201-v_bcst = ls_nfe_imposto_icms-v_bcst.
+        <choice>-sequence-icms-choice-icmssn201-p_icmsst = ls_nfe_imposto_icms-p_icmsst.
+        <choice>-sequence-icms-choice-icmssn201-v_icmsst = ls_nfe_imposto_icms-v_icmsst.
+        IF NOT ls_nfe_imposto_icms-p_fcpst IS INITIAL.
+          <choice>-sequence-icms-choice-icmssn201-sequence-v_bcfcpst = ls_nfe_imposto_icms-v_bcfcpst.
+          <choice>-sequence-icms-choice-icmssn201-sequence-p_fcpst = ls_nfe_imposto_icms-p_fcpst.
+          <choice>-sequence-icms-choice-icmssn201-sequence-v_fcpst = ls_nfe_imposto_icms-v_fcpst.
+        ENDIF.
+        <choice>-sequence-icms-choice-icmssn201-p_cred_sn = ls_nfe_imposto_icms-p_cred_sn.
+        <choice>-sequence-icms-choice-icmssn201-v_cred_icmssn = ls_nfe_imposto_icms-v_cred_icmssn.
+**** ICMSSN202
+      ELSEIF ls_nfe_imposto_icms-csosn = '202'
+        OR ls_nfe_imposto_icms-csosn = '203'.
+        <choice>-sequence-icms-choice-selection = 'ICMSSN202'.
+        <choice>-sequence-icms-choice-icmssn202-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icmssn202-csosn = ls_nfe_imposto_icms-csosn.
+        <choice>-sequence-icms-choice-icmssn202-mod_bcst = ls_nfe_imposto_icms-mod_bcst.
+        IF NOT ls_nfe_imposto_icms-p_mvast IS INITIAL OR ls_nfe_imposto_icms-mod_bcst = '4'. "skip when initial and mod_bcst<>4(info from Brazil)
+          <choice>-sequence-icms-choice-icmssn202-p_mvast = ls_nfe_imposto_icms-p_mvast.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_red_bcst IS INITIAL.
+          <choice>-sequence-icms-choice-icmssn202-p_red_bcst = ls_nfe_imposto_icms-p_red_bcst.
+        ENDIF.
+        <choice>-sequence-icms-choice-icmssn202-v_bcst = ls_nfe_imposto_icms-v_bcst.
+        <choice>-sequence-icms-choice-icmssn202-p_icmsst = ls_nfe_imposto_icms-p_icmsst.
+        <choice>-sequence-icms-choice-icmssn202-v_icmsst = ls_nfe_imposto_icms-v_icmsst.
+        IF NOT ls_nfe_imposto_icms-p_fcpst IS INITIAL.
+          <choice>-sequence-icms-choice-icmssn202-sequence-v_bcfcpst = ls_nfe_imposto_icms-v_bcfcpst.
+          <choice>-sequence-icms-choice-icmssn202-sequence-p_fcpst = ls_nfe_imposto_icms-p_fcpst.
+          <choice>-sequence-icms-choice-icmssn202-sequence-v_fcpst = ls_nfe_imposto_icms-v_fcpst.
+        ENDIF.
+**** ICMSSN500
+      ELSEIF ls_nfe_imposto_icms-csosn = '500'.
+        <choice>-sequence-icms-choice-selection = 'ICMSSN500'.
+        <choice>-sequence-icms-choice-icmssn500-orig = ls_nfe_imposto_icms-orig.
+        <choice>-sequence-icms-choice-icmssn500-csosn = ls_nfe_imposto_icms-csosn.
+        IF NOT ls_nfe_imposto_icms-v_bcstret IS INITIAL                  "Just skip when initial for all (info from Brazil)
+           OR NOT ls_nfe_imposto_icms-v_icmsstret IS INITIAL
+           OR NOT ls_nfe_imposto_icms-p_st IS INITIAL.
+          <choice>-sequence-icms-choice-icmssn500-sequence-v_bcstret = ls_nfe_imposto_icms-v_bcstret.
+          <choice>-sequence-icms-choice-icmssn500-sequence-v_icmsstret = ls_nfe_imposto_icms-v_icmsstret.
+          <choice>-sequence-icms-choice-icmssn500-sequence-p_st = ls_nfe_imposto_icms-p_st.
+          IF lv_ind_final = '0'.
+            <choice>-sequence-icms-choice-icmssn500-sequence-v_icmssubstituto = ls_nfe_imposto_icms-v_icmssubstituto.
+          ELSE. "additional check for final consumer
+            IF NOT ls_nfe_imposto_icms-v_icmssubstituto IS INITIAL.
+              <choice>-sequence-icms-choice-icmssn500-sequence-v_icmssubstituto = ls_nfe_imposto_icms-v_icmssubstituto.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_fcpstret IS INITIAL.
+          <choice>-sequence-icms-choice-icmssn500-sequence1-v_bcfcpstret = ls_nfe_imposto_icms-v_bcfcpstret.
+          <choice>-sequence-icms-choice-icmssn500-sequence1-p_fcpstret = ls_nfe_imposto_icms-p_fcpstret.
+          <choice>-sequence-icms-choice-icmssn500-sequence1-v_fcpstret = ls_nfe_imposto_icms-v_fcpstret.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_icmsefet IS INITIAL.
+          <choice>-sequence-icms-choice-icmssn500-sequence2-p_red_bcefet = ls_nfe_imposto_icms-p_red_bcefet.
+          <choice>-sequence-icms-choice-icmssn500-sequence2-v_bcefet   = ls_nfe_imposto_icms-v_bcefet.
+          <choice>-sequence-icms-choice-icmssn500-sequence2-p_icmsefet   = ls_nfe_imposto_icms-p_icmsefet.
+          <choice>-sequence-icms-choice-icmssn500-sequence2-v_icmsefet   = ls_nfe_imposto_icms-v_icmsefet.
+        ENDIF.
+**** ICMSSN900
+      ELSEIF ls_nfe_imposto_icms-csosn = '900'.
+        <choice>-sequence-icms-choice-selection = 'ICMSSN900'.
+        IF NOT ls_nfe_imposto_icms-orig IS INITIAL.  "optional with NF-e NT2024.001
+          <choice>-sequence-icms-choice-icmssn900-orig = ls_nfe_imposto_icms-orig.
+        ENDIF.
+        <choice>-sequence-icms-choice-icmssn900-csosn = ls_nfe_imposto_icms-csosn.
+        IF NOT ls_nfe_imposto_icms-mod_bc IS INITIAL.
+          <choice>-sequence-icms-choice-icmssn900-sequence-mod_bc = ls_nfe_imposto_icms-mod_bc.
+          <choice>-sequence-icms-choice-icmssn900-sequence-v_bc = ls_nfe_imposto_icms-v_bc.
+          IF NOT ls_nfe_imposto_icms-p_red_bc IS INITIAL.                           "Just skip it when initial (info from Brazil)
+            <choice>-sequence-icms-choice-icmssn900-sequence-p_red_bc = ls_nfe_imposto_icms-p_red_bc.
+          ENDIF.
+          <choice>-sequence-icms-choice-icmssn900-sequence-p_icms = ls_nfe_imposto_icms-p_icms.
+          <choice>-sequence-icms-choice-icmssn900-sequence-v_icms = ls_nfe_imposto_icms-v_icms.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-mod_bcst IS INITIAL.
+          <choice>-sequence-icms-choice-icmssn900-sequence1-mod_bcst = ls_nfe_imposto_icms-mod_bcst.
+          IF NOT ls_nfe_imposto_icms-p_mvast IS INITIAL OR ls_nfe_imposto_icms-mod_bcst = '4'. "skip when initial and mod_bcst<>4(info from Brazil)
+            <choice>-sequence-icms-choice-icmssn900-sequence1-p_mvast = ls_nfe_imposto_icms-p_mvast.
+          ENDIF.
+          IF NOT ls_nfe_imposto_icms-p_red_bcst IS INITIAL.                         "Just skip it when initial (info from Brazil)
+            <choice>-sequence-icms-choice-icmssn900-sequence1-p_red_bcst = ls_nfe_imposto_icms-p_red_bcst.
+          ENDIF.
+          <choice>-sequence-icms-choice-icmssn900-sequence1-v_bcst = ls_nfe_imposto_icms-v_bcst.
+          <choice>-sequence-icms-choice-icmssn900-sequence1-p_icmsst = ls_nfe_imposto_icms-p_icmsst.
+          <choice>-sequence-icms-choice-icmssn900-sequence1-v_icmsst = ls_nfe_imposto_icms-v_icmsst.
+          IF NOT ls_nfe_imposto_icms-p_fcpst IS INITIAL.
+            <choice>-sequence-icms-choice-icmssn900-sequence1-sequence-v_bcfcpst = ls_nfe_imposto_icms-v_bcfcpst.
+            <choice>-sequence-icms-choice-icmssn900-sequence1-sequence-p_fcpst = ls_nfe_imposto_icms-p_fcpst.
+            <choice>-sequence-icms-choice-icmssn900-sequence1-sequence-v_fcpst = ls_nfe_imposto_icms-v_fcpst.
+          ENDIF.
+        ENDIF.
+        IF NOT ls_nfe_imposto_icms-p_cred_sn IS INITIAL.              "Just skip it when initial (info from Brazil)
+          <choice>-sequence-icms-choice-icmssn900-sequence2-p_cred_sn = ls_nfe_imposto_icms-p_cred_sn.
+          <choice>-sequence-icms-choice-icmssn900-sequence2-v_cred_icmssn = ls_nfe_imposto_icms-v_cred_icmssn.
+        ENDIF.
+      ELSE.
+        MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_ICMS' INTO lv_dummy. "#EC NOTEXT
+        me->append_error( ).
+      ENDIF.
+    ENDIF.
+    CLEAR: ls_nfe_imposto_icms.
+  ELSEIF NOT is_nfe_det_imposto-issqn_ref IS INITIAL.
+    <choice>-selection = 'SEQUENCE'.           "Change of original proxy to avoid transformation errors when ISSQN is filled!!
+*** ISSQN
+    UNASSIGN <content>.
+    READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_IMPOSTO_ISSQN' ASSIGNING <content>.
+    ASSIGN <content>-param_value->* TO <lt_nfe_imposto_issqn>.
+
+    READ TABLE <lt_nfe_imposto_issqn> INTO ls_nfe_imposto_issqn
+      WITH KEY id =  is_nfe_det_imposto-issqn_ref.
+    IF sy-subrc <> 0.
+      MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_ISSQN' INTO lv_dummy. "#EC NOTEXT
+      me->append_error( ).
+    ELSE.
+      <choice>-sequence-issqn-v_bc = ls_nfe_imposto_issqn-v_bc.
+      <choice>-sequence-issqn-v_aliq = ls_nfe_imposto_issqn-v_aliq.
+      <choice>-sequence-issqn-v_issqn = ls_nfe_imposto_issqn-v_issqn.
+      <choice>-sequence-issqn-c_mun_fg = ls_nfe_imposto_issqn-c_mun_fg.
+      <choice>-sequence-issqn-c_list_serv = ls_nfe_imposto_issqn-c_list_serv.
+      IF NOT ls_nfe_imposto_issqn-v_deducao IS INITIAL.
+        <choice>-sequence-issqn-v_deducao = ls_nfe_imposto_issqn-v_deducao.
+      ENDIF.
+      IF NOT ls_nfe_imposto_issqn-v_outro IS INITIAL.
+        <choice>-sequence-issqn-v_outro = ls_nfe_imposto_issqn-v_outro.
+      ENDIF.
+      IF NOT ls_nfe_imposto_issqn-v_desc_incond IS INITIAL.
+        <choice>-sequence-issqn-v_desc_incond = ls_nfe_imposto_issqn-v_desc_incond.
+      ENDIF.
+      IF NOT ls_nfe_imposto_issqn-v_desc_cond IS INITIAL.
+        <choice>-sequence-issqn-v_desc_cond = ls_nfe_imposto_issqn-v_desc_cond.
+      ENDIF.
+      IF NOT ls_nfe_imposto_issqn-v_issret IS INITIAL.
+        <choice>-sequence-issqn-v_issret = ls_nfe_imposto_issqn-v_issret.
+      ENDIF.
+      CLEAR: lv_ind_iss.
+      lv_ind_iss = ls_nfe_imposto_issqn-ind_iss.
+      SHIFT lv_ind_iss LEFT DELETING LEADING '0'.  " delete leading zeros
+      <choice>-sequence-issqn-ind_iss = lv_ind_iss.
+      IF NOT ls_nfe_imposto_issqn-c_servico IS INITIAL.
+        <choice>-sequence-issqn-c_servico = ls_nfe_imposto_issqn-c_servico.
+      ENDIF.
+      IF NOT ls_nfe_imposto_issqn-c_mun IS INITIAL.
+        <choice>-sequence-issqn-c_mun = ls_nfe_imposto_issqn-c_mun.
+      ENDIF.
+      IF NOT ls_nfe_imposto_issqn-c_pais IS INITIAL.
+        <choice>-sequence-issqn-c_pais = ls_nfe_imposto_issqn-c_pais.
+      ENDIF.
+      IF NOT ls_nfe_imposto_issqn-n_processo IS INITIAL.
+        <choice>-sequence-issqn-n_processo = ls_nfe_imposto_issqn-n_processo.
+      ENDIF.
+      <choice>-sequence-issqn-ind_incentivo = ls_nfe_imposto_issqn-ind_incentivo.
+    ENDIF.
+    CLEAR: ls_nfe_imposto_issqn.
+  ELSE.
+    MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_DET_IMPOSTO' INTO lv_dummy. "#EC NOTEXT
+    me->append_error( ).
+  ENDIF.
+
+*** IPI
+  IF NOT is_nfe_det_imposto-ipi_ref IS INITIAL.
+    UNASSIGN <content>.
+    READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_IMPOSTO_IPI' ASSIGNING <content>.
+    ASSIGN <content>-param_value->* TO <lt_nfe_imposto_ipi>.
+
+    READ TABLE <lt_nfe_imposto_ipi> INTO ls_nfe_imposto_ipi
+             WITH KEY id =  is_nfe_det_imposto-ipi_ref.
+    IF sy-subrc <> 0.
+      MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_IPI' INTO lv_dummy. "#EC NOTEXT
+      me->append_error( ).
+    ELSE.
+      IF NOT ls_nfe_imposto_ipi-cl_enq IS INITIAL.
+        MESSAGE e207(/xnfe/app_status_erp) WITH ls_nfe_imposto_ipi-cl_enq 'CL_ENQ' 'IT_NFE_IMPOSTO_IPI' INTO lv_dummy. "#EC NOTEXT
+        me->append_error( ).
+      ENDIF.
+      IF NOT ls_nfe_imposto_ipi-cnpjprod IS INITIAL.
+        <choice>-sequence-ipi-cnpjprod = ls_nfe_imposto_ipi-cnpjprod.
+      ENDIF.
+      IF NOT ls_nfe_imposto_ipi-c_selo IS INITIAL.
+        <choice>-sequence-ipi-c_selo = ls_nfe_imposto_ipi-c_selo.
+        IF NOT ls_nfe_imposto_ipi-q_selo IS INITIAL . " send qSelo only when cSelo is filled (when there is a seal) but skip when initial
+          <choice>-sequence-ipi-q_selo = ls_nfe_imposto_ipi-q_selo.
+        ENDIF.
+      ENDIF.
+      <choice>-sequence-ipi-c_enq = ls_nfe_imposto_ipi-c_enq.
+**** IPITrib
+      IF ls_nfe_imposto_ipi-cst = '00'
+        OR ls_nfe_imposto_ipi-cst = '49'
+        OR ls_nfe_imposto_ipi-cst = '50'
+        OR ls_nfe_imposto_ipi-cst = '99'.
+        <choice>-sequence-ipi-choice-selection = 'IPITRIB'.
+        <choice>-sequence-ipi-choice-ipitrib-cst = ls_nfe_imposto_ipi-cst.
+        <choice>-sequence-ipi-choice-ipitrib-v_ipi = ls_nfe_imposto_ipi-v_ipi.
+        IF ls_nfe_imposto_ipi-pauta IS INITIAL. "Flag field to decide which tag should be filled
+          <choice>-sequence-ipi-choice-ipitrib-choice-selection = 'SEQUENCE'.
+          <choice>-sequence-ipi-choice-ipitrib-choice-sequence-v_bc = ls_nfe_imposto_ipi-v_bc.
+          <choice>-sequence-ipi-choice-ipitrib-choice-sequence-p_ipi = ls_nfe_imposto_ipi-p_ipi.
+        ELSE.
+          <choice>-sequence-ipi-choice-ipitrib-choice-selection = 'SEQUENCE1'.
+          <choice>-sequence-ipi-choice-ipitrib-choice-sequence1-q_unid = ls_nfe_imposto_ipi-q_unid.
+          <choice>-sequence-ipi-choice-ipitrib-choice-sequence1-v_unid = ls_nfe_imposto_ipi-v_unid.
+        ENDIF.
+**** IPINT
+      ELSEIF  ls_nfe_imposto_ipi-cst >= '01' AND
+           ls_nfe_imposto_ipi-cst <= '05'
+          OR  ls_nfe_imposto_ipi-cst >= '51' AND
+        ls_nfe_imposto_ipi-cst <= '55'.
+        <choice>-sequence-ipi-choice-selection = 'IPINT'.
+        <choice>-sequence-ipi-choice-ipint-cst = ls_nfe_imposto_ipi-cst.
+      ELSE.
+        MESSAGE e250(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_IPI' INTO lv_dummy. "#EC NOTEXT
+        me->append_error( ).
+      ENDIF.
+    ENDIF.
+    CLEAR: ls_nfe_imposto_ipi.
+  ENDIF.
+
+*** II
+  IF NOT is_nfe_det_imposto-ii_ref IS INITIAL.
+    UNASSIGN <content>.
+    READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_IMPOSTO_II' ASSIGNING <content>.
+    ASSIGN <content>-param_value->* TO <lt_nfe_imposto_ii>.
+
+    READ TABLE <lt_nfe_imposto_ii> INTO ls_nfe_imposto_ii
+              WITH KEY id =  is_nfe_det_imposto-ii_ref.
+    IF sy-subrc <> 0.
+      MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_II' INTO lv_dummy. "#EC NOTEXT
+      me->append_error( ).
+    ELSE.
+      <choice>-sequence-ii-v_bc = ls_nfe_imposto_ii-v_bc.
+      <choice>-sequence-ii-v_desp_adu = ls_nfe_imposto_ii-v_desp_adu.
+      <choice>-sequence-ii-v_ii = ls_nfe_imposto_ii-v_ii.
+      <choice>-sequence-ii-v_iof = ls_nfe_imposto_ii-v_iof.
+    ENDIF.
+    CLEAR: ls_nfe_imposto_ii.
+  ENDIF.
+
+*** PIS
+  IF NOT is_nfe_det_imposto-pis_ref IS INITIAL.
+    ASSIGN COMPONENT 'PIS' OF STRUCTURE <detimposto> TO <pis>.
+    UNASSIGN <content>.
+    READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_IMPOSTO_PIS' ASSIGNING <content>.
+    ASSIGN <content>-param_value->* TO <lt_nfe_imposto_pis>.
+
+    READ TABLE <lt_nfe_imposto_pis> INTO ls_nfe_imposto_pis
+               WITH KEY id =  is_nfe_det_imposto-pis_ref.
+    IF sy-subrc <> 0.
+      MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_PIS' INTO lv_dummy. "#EC NOTEXT
+      me->append_error( ).
+    ELSE.
+**** PISALIQ
+      IF ls_nfe_imposto_pis-cst = '01' OR ls_nfe_imposto_pis-cst = '02'.
+        <pis>-choice-selection = 'PISALIQ'.
+        <pis>-choice-pisaliq-cst = ls_nfe_imposto_pis-cst.
+        <pis>-choice-pisaliq-v_bc = ls_nfe_imposto_pis-v_bc.
+        <pis>-choice-pisaliq-p_pis = ls_nfe_imposto_pis-p_pis.
+        <pis>-choice-pisaliq-v_pis = ls_nfe_imposto_pis-v_pis.
+**** PISQTDE
+      ELSEIF ls_nfe_imposto_pis-cst = '03'.
+        <pis>-choice-selection = 'PISQTDE'.
+        <pis>-choice-pisqtde-cst = ls_nfe_imposto_pis-cst.
+        <pis>-choice-pisqtde-q_bcprod = ls_nfe_imposto_pis-q_bcprod.
+        <pis>-choice-pisqtde-v_aliq_prod = ls_nfe_imposto_pis-v_aliq_prod.
+        <pis>-choice-pisqtde-v_pis = ls_nfe_imposto_pis-v_pis.
+**** PISNT
+      ELSEIF ls_nfe_imposto_pis-cst > '03' AND ls_nfe_imposto_pis-cst < '10'.
+        <pis>-choice-selection = 'PISNT'.
+        <pis>-choice-pisnt-cst = ls_nfe_imposto_pis-cst.
+**** PISOUTR
+      ELSEIF ls_nfe_imposto_pis-cst > '48'.
+        <pis>-choice-selection = 'PISOUTR'.
+        <pis>-choice-pisoutr-cst = ls_nfe_imposto_pis-cst.
+        <pis>-choice-pisoutr-v_pis = ls_nfe_imposto_pis-v_pis.
+        IF NOT ls_nfe_imposto_pis-v_aliq_prod IS INITIAL            "Just skip when initial for both (info from Brazil)
+           OR NOT ls_nfe_imposto_pis-q_bcprod IS INITIAL.
+          <pis>-choice-pisoutr-choice-selection = 'SEQUENCE1'.
+          <pis>-choice-pisoutr-choice-sequence1-q_bcprod = ls_nfe_imposto_pis-q_bcprod.
+          <pis>-choice-pisoutr-choice-sequence1-v_aliq_prod = ls_nfe_imposto_pis-v_aliq_prod.
+        ELSE.
+          <pis>-choice-pisoutr-choice-selection = 'SEQUENCE'.
+          <pis>-choice-pisoutr-choice-sequence-v_bc = ls_nfe_imposto_pis-v_bc.
+          <pis>-choice-pisoutr-choice-sequence-p_pis = ls_nfe_imposto_pis-p_pis.
+        ENDIF.
+      ELSE.
+        MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_PIS' INTO lv_dummy. "#EC NOTEXT
+        me->append_error( ).
+      ENDIF.
+    ENDIF.
+    CLEAR: ls_nfe_imposto_pis.
+  ENDIF.
+
+*** PISST
+  IF NOT is_nfe_det_imposto-pisst_ref IS INITIAL.
+    ASSIGN COMPONENT 'PISST' OF STRUCTURE <detimposto> TO <pisst>.
+    UNASSIGN <content>.
+    READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_IMPOSTO_PISST' ASSIGNING <content>.
+    ASSIGN <content>-param_value->* TO <lt_nfe_imposto_pisst>.
+
+    READ TABLE <lt_nfe_imposto_pisst> INTO ls_nfe_imposto_pisst
+                       WITH KEY id =  is_nfe_det_imposto-pisst_ref.
+    IF sy-subrc <> 0.
+      MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_PISST' INTO lv_dummy. "#EC NOTEXT
+      me->append_error( ).
+    ELSE.
+      IF NOT ls_nfe_imposto_pisst-q_bcprod IS INITIAL            "Just skip when initial for both (info from Brazil)
+        OR NOT ls_nfe_imposto_pisst-v_aliq_prod IS INITIAL.
+        <pisst>-choice-selection = 'SEQUENCE1'.
+        <pisst>-choice-sequence1-q_bcprod = ls_nfe_imposto_pisst-q_bcprod.
+        <pisst>-choice-sequence1-v_aliq_prod = ls_nfe_imposto_pisst-v_aliq_prod.
+      ELSE.
+        <pisst>-choice-selection = 'SEQUENCE'.
+        <pisst>-choice-sequence-v_bc = ls_nfe_imposto_pisst-v_bc.
+        <pisst>-choice-sequence-p_pis = ls_nfe_imposto_pisst-p_pis.
+      ENDIF.
+      <pisst>-v_pis = ls_nfe_imposto_pisst-v_pis.
+      IF NOT ls_nfe_imposto_pisst-ind_soma_pisst IS INITIAL.
+        <pisst>-ind_soma_pisst = ls_nfe_imposto_pisst-ind_soma_pisst.
+      ENDIF.
+    ENDIF.
+    CLEAR: ls_nfe_imposto_pisst.
+  ENDIF.
+
+*** COFINS
+  IF NOT is_nfe_det_imposto-cofins_ref IS INITIAL.
+    ASSIGN COMPONENT 'COFINS' OF STRUCTURE <detimposto> TO <cofins>.
+    UNASSIGN <content>.
+    READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_IMPOSTO_COFINS' ASSIGNING <content>.
+    ASSIGN <content>-param_value->* TO <lt_nfe_imposto_cofins>.
+
+    READ TABLE <lt_nfe_imposto_cofins> INTO ls_nfe_imposto_cofins
+                       WITH KEY id =  is_nfe_det_imposto-cofins_ref.
+    IF sy-subrc <> 0.
+      MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_COFINS' INTO lv_dummy. "#EC NOTEXT
+      me->append_error( ).
+    ELSE.
+**** COFINSALIQ
+      IF ls_nfe_imposto_cofins-cst = '01' OR ls_nfe_imposto_cofins-cst = '02'.
+        <cofins>-choice-selection = 'COFINSALIQ'.
+        <cofins>-choice-cofinsaliq-cst = ls_nfe_imposto_cofins-cst.
+        <cofins>-choice-cofinsaliq-v_bc = ls_nfe_imposto_cofins-v_bc.
+        <cofins>-choice-cofinsaliq-p_cofins = ls_nfe_imposto_cofins-p_cofins.
+        <cofins>-choice-cofinsaliq-v_cofins = ls_nfe_imposto_cofins-v_cofins.
+**** COFINSQTDE
+      ELSEIF ls_nfe_imposto_cofins-cst = '03'.
+        <cofins>-choice-selection = 'COFINSQTDE'.
+        <cofins>-choice-cofinsqtde-cst = ls_nfe_imposto_cofins-cst.
+        <cofins>-choice-cofinsqtde-q_bcprod = ls_nfe_imposto_cofins-q_bcprod.
+        <cofins>-choice-cofinsqtde-v_aliq_prod = ls_nfe_imposto_cofins-v_aliq_prod.
+        <cofins>-choice-cofinsqtde-v_cofins = ls_nfe_imposto_cofins-v_cofins.
+**** COFINSNT
+      ELSEIF ls_nfe_imposto_cofins-cst > '03' AND ls_nfe_imposto_cofins-cst < '10'.
+        <cofins>-choice-selection = 'COFINSNT'.
+        <cofins>-choice-cofinsnt-cst = ls_nfe_imposto_cofins-cst.
+**** COFINSOUTR
+      ELSEIF ls_nfe_imposto_cofins-cst > '48'.
+        <cofins>-choice-selection = 'COFINSOUTR'.
+        <cofins>-choice-cofinsoutr-cst = ls_nfe_imposto_cofins-cst.
+        <cofins>-choice-cofinsoutr-v_cofins = ls_nfe_imposto_cofins-v_cofins.
+        IF NOT ls_nfe_imposto_cofins-v_aliq_prod IS INITIAL                         "Just skip when initial for both (info from Brazil)
+           OR NOT ls_nfe_imposto_cofins-q_bcprod IS INITIAL.
+          <cofins>-choice-cofinsoutr-choice-selection = 'SEQUENCE1'.
+          <cofins>-choice-cofinsoutr-choice-sequence1-q_bcprod = ls_nfe_imposto_cofins-q_bcprod.
+          <cofins>-choice-cofinsoutr-choice-sequence1-v_aliq_prod = ls_nfe_imposto_cofins-v_aliq_prod.
+        ELSE.
+          <cofins>-choice-cofinsoutr-choice-selection = 'SEQUENCE'.
+          <cofins>-choice-cofinsoutr-choice-sequence-v_bc = ls_nfe_imposto_cofins-v_bc.
+          <cofins>-choice-cofinsoutr-choice-sequence-p_cofins = ls_nfe_imposto_cofins-p_cofins.
+        ENDIF.
+      ELSE.
+        MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_COFINS' INTO lv_dummy. "#EC NOTEXT
+        me->append_error( ).
+      ENDIF.
+    ENDIF.
+    CLEAR: ls_nfe_imposto_cofins.
+  ENDIF.
+
+*** COFINSST
+  IF NOT is_nfe_det_imposto-cofinsst_ref IS INITIAL.
+    ASSIGN COMPONENT 'COFINSST' OF STRUCTURE <detimposto> TO <cofinsst>.
+    UNASSIGN <content>.
+    READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_IMPOSTO_COFINSST' ASSIGNING <content>.
+    ASSIGN <content>-param_value->* TO <lt_nfe_imposto_cofinsst>.
+
+    READ TABLE <lt_nfe_imposto_cofinsst> INTO ls_nfe_imposto_cofinsst
+                       WITH KEY id =  is_nfe_det_imposto-cofinsst_ref.
+    IF sy-subrc <> 0.
+      MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_COFINSST' INTO lv_dummy. "#EC NOTEXT
+      me->append_error( ).
+    ELSE.
+      IF NOT ls_nfe_imposto_cofinsst-v_aliq_prod IS INITIAL.
+        <cofinsst>-choice-selection = 'SEQUENCE1'.
+        <cofinsst>-choice-sequence1-q_bcprod = ls_nfe_imposto_cofinsst-q_bcprod.
+        <cofinsst>-choice-sequence1-v_aliq_prod = ls_nfe_imposto_cofinsst-v_aliq_prod.
+      ELSE.
+        <cofinsst>-choice-selection = 'SEQUENCE'.
+        <cofinsst>-choice-sequence-v_bc = ls_nfe_imposto_cofinsst-v_bc.
+        <cofinsst>-choice-sequence-p_cofins = ls_nfe_imposto_cofinsst-p_cofins.
+      ENDIF.
+      <cofinsst>-v_cofins = ls_nfe_imposto_cofinsst-v_cofins.
+      IF NOT ls_nfe_imposto_cofinsst-ind_soma_cofinsst IS INITIAL.
+        <cofinsst>-ind_soma_cofinsst = ls_nfe_imposto_cofinsst-ind_soma_cofinsst.
+      ENDIF.
+    ENDIF.
+    CLEAR: ls_nfe_imposto_cofinsst.
+  ENDIF.
+
+*** ICMSUFDest
+  IF NOT is_nfe_det_imposto-icmsufdest_ref IS INITIAL.
+    ASSIGN COMPONENT 'ICMSUFDEST' OF STRUCTURE <detimposto> TO <icmsufdest>.
+    UNASSIGN <content>.
+    READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_IMPOSTO_ICMSUFDEST' ASSIGNING <content>.
+    ASSIGN <content>-param_value->* TO <lt_nfe_imposto_icmsufdest>.
+
+    READ TABLE <lt_nfe_imposto_icmsufdest> INTO ls_nfe_imposto_icmsufdest
+              WITH KEY id =  is_nfe_det_imposto-icmsufdest_ref.
+    IF sy-subrc <> 0.
+      MESSAGE e210(/xnfe/app_status_erp) WITH 'IT_NFE_IMPOSTO_ICMSUFDEST' INTO lv_dummy. "#EC NOTEXT
+      me->append_error( ).
+    ELSE.
+      <icmsufdest>-v_bcufdest       = ls_nfe_imposto_icmsufdest-v_bcuf_dest.
+      IF NOT ls_nfe_imposto_icmsufdest-v_bcfcpuf_dest IS INITIAL.
+        <icmsufdest>-v_bcfcpufdest    = ls_nfe_imposto_icmsufdest-v_bcfcpuf_dest.
+      ENDIF.
+      IF NOT ls_nfe_imposto_icmsufdest-p_fcpuf_dest IS INITIAL.
+        <icmsufdest>-p_fcpufdest      = ls_nfe_imposto_icmsufdest-p_fcpuf_dest.
+      ENDIF.
+      <icmsufdest>-p_icmsufdest     = ls_nfe_imposto_icmsufdest-p_icmsuf_dest.
+      lv_p_icms_inter               = ls_nfe_imposto_icmsufdest-p_icms_inter.
+      <icmsufdest>-p_icmsinter      = lv_p_icms_inter.
+      <icmsufdest>-p_icmsinter_part = ls_nfe_imposto_icmsufdest-p_icms_inter_part.
+      <icmsufdest>-v_fcpufdest      = ls_nfe_imposto_icmsufdest-v_fcpuf_dest.
+      <icmsufdest>-v_icmsufdest     = ls_nfe_imposto_icmsufdest-v_icmsuf_dest.
+      <icmsufdest>-v_icmsufremet    = ls_nfe_imposto_icmsufdest-v_icmsuf_remet.
+    ENDIF.
+    CLEAR: ls_nfe_imposto_icmsufdest.
+  ENDIF.
+
+*** IS -> not supported
+
+*** IBSCBS -> not supported
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""$"$\SE:(1) Classe /XNFE/CL_T2PROXY_NFE_400, Método FILL_NFE_DET_IMPOSTO_400, Fim                                                                             A
+*$*$-Start: (1)---------------------------------------------------------------------------------$*$*
+ENHANCEMENT 1  Z_XNFE_TAGS_XML.    "active version
+
+  FIELD-SYMBOLS: <lt_nfe_ext2> TYPE /xnfe/nfe_ext2_tab,
+                 <ibscbs>      TYPE /xnfe/009_nfe_b_ttrib_nfe,
+                 <target>      TYPE any.
+
+  DATA: lv_component TYPE string.
+
+  UNASSIGN <content>.
+
+  READ TABLE me->mt_content WITH KEY param_name = 'IT_NFE_EXT2' ASSIGNING <content>.
+
+  IF sy-subrc = 0.
+    ASSIGN <content>-param_value->* TO <lt_nfe_ext2>.
+  ENDIF.
+
+  IF <lt_nfe_ext2> IS ASSIGNED.
+
+    DATA(lt_nfe_ext2) = <lt_nfe_ext2>.
+
+    DELETE: lt_nfe_ext2 WHERE value IS INITIAL,
+            lt_nfe_ext2 WHERE value = '0.0000' AND row <> 99,
+            lt_nfe_ext2 WHERE value = '0.00' AND row <> 99.
+
+    ASSIGN COMPONENT 'IBSCBS' OF STRUCTURE <detimposto> TO <ibscbs>.
+
+    LOOP AT lt_nfe_ext2 INTO DATA(nfe_ext2) WHERE itmnum = is_nfe_det_imposto-id
+                                              AND param = 'DET_IMPOSTO_IBSCBS'.
+
+      DATA(lv_field) = CONV string( nfe_ext2-field ).
+      DATA(lv_value) = CONV string( nfe_ext2-value ).
+      DATA(lv_path) = VALUE string( ).
+
+      CASE lv_field.
+        WHEN 'CST'.
+          lv_path = |{ lv_field }|.
+          DATA(lv_cst) = lv_value.
+
+        WHEN 'C_CLASS_TRIB'.
+          lv_path = |{ lv_field }|.
+          DATA(lv_c_class_trib) = lv_value.
+
+        WHEN 'V_BC' OR 'V_IBS'.
+
+          lv_path = |CHOICE-G_IBSCBS-{ lv_field }|.
+          <ibscbs>-choice-selection = 'G_IBSCBS'.
+
+        WHEN 'P_IBS_UF' OR
+             'P_DIF_IBS_UF' OR
+             'V_DIF_IBS_UF' OR
+             'V_DEV_TRIB_IBS_UF' OR
+             'P_RED_ALIQ_IBS_UF' OR
+             'P_ALIQ_EFET_IBS_UF' OR
+             'V_IBS_UF'.
+
+          CASE lv_field.
+            WHEN 'P_IBS_UF'.
+              lv_field = 'P_IBSUF'.
+            WHEN 'P_DIF_IBS_UF'.
+              lv_field = 'P_DIF'.
+            WHEN 'V_DIF_IBS_UF'.
+              lv_field = 'V_DIF'.
+            WHEN 'V_DEV_TRIB_IBS_UF'.
+              lv_field = 'V_DEV_TRIB'.
+            WHEN 'P_RED_ALIQ_IBS_UF'.
+              lv_field = 'P_RED_ALIQ'.
+            WHEN 'P_ALIQ_EFET_IBS_UF'.
+              lv_field = 'P_ALIQ_EFET'.
+            WHEN 'V_IBS_UF'.
+              lv_field = 'V_IBSUF'.
+            WHEN OTHERS.
+          ENDCASE.
+
+          lv_path = |CHOICE-G_IBSCBS-G_IBSUF-{ lv_field }|.
+          <ibscbs>-choice-selection = 'G_IBSCBS'.
+
+        WHEN 'P_IBS_MUN' OR
+             'P_DIF_IBS_MUN' OR
+             'V_DIF_IBS_MUN' OR
+             'V_DEV_TRIB_IBS_MUN' OR
+             'P_RED_ALIQ_IBS_MUN' OR
+             'P_ALIQ_EFET_IBS_MUN' OR
+             'V_IBS_MUN'.
+
+          CASE lv_field.
+            WHEN 'P_IBS_MUN'.
+              lv_field = 'P_IBSMUN'.
+            WHEN 'P_DIF_IBS_MUN'.
+              lv_field = 'P_DIF'.
+            WHEN 'V_DIF_IBS_MUN'.
+              lv_field = 'V_DIF'.
+            WHEN 'V_DEV_TRIB_IBS_MUN'.
+              lv_field = 'V_DEV_TRIB'.
+            WHEN 'P_RED_ALIQ_IBS_MUN'.
+              lv_field = 'P_RED_ALIQ'.
+            WHEN 'P_ALIQ_EFET_IBS_MUN'.
+              lv_field = 'P_ALIQ_EFET'.
+            WHEN 'V_IBS_MUN'.
+              lv_field = 'V_IBSMUN'.
+            WHEN OTHERS.
+          ENDCASE.
+
+          lv_path = |CHOICE-G_IBSCBS-G_IBSMUN-{ lv_field }|.
+          <ibscbs>-choice-selection = 'G_IBSCBS'.
+
+        WHEN 'P_CBS' OR
+             'P_DIF_CBS' OR
+             'V_DIF_CBS' OR
+             'V_DEV_TRIB_CBS' OR
+             'P_RED_ALIQ_CBS' OR
+             'P_ALIQ_EFET_CBS' OR
+             'V_CBS'.
+
+          CASE lv_field.
+            WHEN 'P_CBS'.
+              lv_field = 'P_CBS'.
+            WHEN 'P_DIF_CBS'.
+              lv_field = 'P_DIF'.
+            WHEN 'V_DIF_CBS'.
+              lv_field = 'V_DIF'.
+            WHEN 'V_DEV_TRIB_CBS'.
+              lv_field = 'V_DEV_TRIB'.
+            WHEN 'P_RED_ALIQ_CBS'.
+              lv_field = 'P_RED_ALIQ'.
+            WHEN 'P_ALIQ_EFET_CBS'.
+              lv_field = 'P_ALIQ_EFET'.
+            WHEN 'V_CBS'.
+              lv_field = 'V_CBS'.
+            WHEN OTHERS.
+          ENDCASE.
+
+          lv_path = |CHOICE-G_IBSCBS-G_CBS-{ lv_field }|.
+          <ibscbs>-choice-selection = 'G_IBSCBS'.
+
+        WHEN 'CST_REG' OR
+             'C_CLASS_TRIB_REG'.
+
+          IF lv_field = 'CST_REG'.
+            lv_field = 'CSTREG'.
+          ENDIF.
+
+          lv_path = |CHOICE-G_IBSCBS-G_TRIB_REGULAR-{ lv_field }|.
+          <ibscbs>-choice-selection = 'G_IBSCBS'.
+
+        WHEN 'P_ALIQ_EFET_REG_IBS_UF' OR
+             'V_TRIB_REG_IBS_UF' OR
+             'P_ALIQ_EFET_REG_IBS_MUN' OR
+             'V_TRIB_REG_IBS_MUN' OR
+             'P_ALIQ_EFET_REG_CBS' OR
+             'V_TRIB_REG_CBS'.
+
+          CASE lv_field.
+            WHEN 'P_ALIQ_EFET_REG_IBS_UF'.
+              lv_field = 'P_ALIQ_EFET_REG_IBSUF'.
+            WHEN 'V_TRIB_REG_IBS_UF'.
+              lv_field = 'V_TRIB_REG_IBSUF'.
+            WHEN 'P_ALIQ_EFET_REG_IBS_MUN'.
+              lv_field = 'P_ALIQ_EFET_REG_IBSMUN'.
+            WHEN 'V_TRIB_REG_IBS_MUN'.
+              lv_field = 'V_TRIB_REG_IBSMUN'.
+            WHEN 'P_ALIQ_EFET_REG_CBS'.
+              lv_field = 'P_ALIQ_EFET_REG_CBS'.
+            WHEN 'V_TRIB_REG_CBS'.
+              lv_field = 'V_TRIB_REG_CBS'.
+            WHEN OTHERS.
+          ENDCASE.
+
+          lv_path = |CHOICE-G_IBSCBS-G_TRIB_REGULAR-{ lv_field }|.
+          <ibscbs>-choice-selection = 'G_IBSCBS'.
+
+        WHEN 'C_CRED_PRES_IBS' OR
+             'P_CRED_PRES_IBS'.
+
+          CASE lv_field.
+            WHEN 'C_CRED_PRES_IBS'.
+              lv_field = 'C_CRED_PRES'.
+            WHEN 'P_CRED_PRES_IBS'.
+              lv_field = 'P_CRED_PRES'.
+            WHEN OTHERS.
+          ENDCASE.
+
+          lv_path = |CHOICE-G_IBSCBS-G_IBSCRED_PRES-{ lv_field }|.
+          <ibscbs>-choice-selection = 'G_IBSCBS'.
+
+        WHEN 'V_CRED_PRES_CBS'.
+
+          CASE lv_field.
+            WHEN 'V_CRED_PRES_CBS'.
+              lv_field = 'V_CRED_PRES'.
+            WHEN OTHERS.
+          ENDCASE.
+
+          lv_path = |CHOICE-G_IBSCBS-G_CBS_CRED_PRES-CHOICE-V_CRED_PRES|.
+          <ibscbs>-choice-selection = 'G_IBSCBS'.
+          <ibscbs>-choice-g_ibscbs-g_cbscred_pres-choice-selection = 'V_CRED_PRES'.
+
+        WHEN 'V_CRED_PRES_COND_SUS_CBS'.
+
+          CASE lv_field.
+            WHEN 'V_CRED_PRES_COND_SUS_CBS'.
+              lv_field = 'V_CRED_PRES_COND_SUS_CBS'.
+            WHEN OTHERS.
+          ENDCASE.
+
+          lv_path = |CHOICE-G_IBSCBS-G_CBS_CRED_PRES-CHOICE-V_CRED_PRES_COND_SUS|.
+          <ibscbs>-choice-selection = 'G_IBSCBS'.
+          <ibscbs>-choice-g_ibscbs-g_cbscred_pres-choice-selection = 'V_CRED_PRES_COND_SUS'.
+
+        WHEN 'P_IBS_UF_GOV_PUR' OR
+             'V_IBS_UF_GOV_PUR' OR
+             'P_IBS_MUN_GOV_PUR' OR
+             'V_IBS_MUN_GOV_PUR' OR
+             'P_CBS_GOV_PUR' OR
+             'V_CBS_GOV_PUR'.
+
+          CASE lv_field.
+            WHEN 'P_IBS_UF_GOV_PUR'.
+              lv_field = 'P_ALIQ_IBSUF'.
+            WHEN 'V_IBS_UF_GOV_PUR'.
+              lv_field = 'V_TRIB_IBSUF'.
+            WHEN 'P_IBS_MUN_GOV_PUR'.
+              lv_field = 'P_ALIQ_IBSMUN'.
+            WHEN 'V_IBS_MUN_GOV_PUR'.
+              lv_field = 'V_TRIB_IBSMUN'.
+            WHEN 'P_CBS_GOV_PUR'.
+              lv_field = 'P_ALIQ_CBS'.
+            WHEN 'V_CBS_GOV_PUR'.
+              lv_field = 'V_TRIB_CBS'.
+            WHEN OTHERS.
+          ENDCASE.
+
+          lv_path = |CHOICE-G_IBSCBS-G_TRIB_COMPRA_GOV-{ lv_field }|.
+          <ibscbs>-choice-selection = 'G_IBSCBS'.
+
+        WHEN OTHERS.
+          CONTINUE.
+      ENDCASE.
+
+      IF lv_path IS NOT INITIAL AND
+         nfe_ext2-field <> 'CST_REG' AND
+         nfe_ext2-field <> 'C_CLASS_TRIB_REG'.
+
+        ASSIGN COMPONENT lv_path OF STRUCTURE <ibscbs> TO FIELD-SYMBOL(<fs_target>).
+
+        IF <fs_target> IS ASSIGNED.
+
+          <fs_target> = lv_value.
+
+        ENDIF.
+
+      ELSE.
+
+        IF nfe_ext2-field = 'CST_REG'.
+
+          <ibscbs>-choice-g_ibscbs-g_trib_regular-cstreg = <ibscbs>-cst.
+
+        ENDIF.
+
+        IF nfe_ext2-field = 'C_CLASS_TRIB_REG'.
+
+          <ibscbs>-choice-g_ibscbs-g_trib_regular-c_class_trib_reg = <ibscbs>-c_class_trib.
+
+        ENDIF.
+
+      ENDIF.
+
+    ENDLOOP.
+
+  ENDIF.
+
+ENDENHANCEMENT.
+*$*$-End:   (1)---------------------------------------------------------------------------------$*$*
+ENDMETHOD.
