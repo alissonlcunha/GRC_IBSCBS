@@ -1,0 +1,20 @@
+FORM clear_ibscbs_total_fields CHANGING xmlh TYPE j1b_nf_xml_header.
+
+  CLEAR xmlh-vibsuf.
+  CLEAR xmlh-vibsmun.
+  CLEAR xmlh-vbcibscbs.
+  CLEAR xmlh-vcbs.
+  CLEAR xmlh-vibs.
+  CLEAR xmlh-vdifibsuf.
+  CLEAR xmlh-vdevtribibsuf.
+  CLEAR xmlh-vdifibsmun.
+  CLEAR xmlh-vdevtribibsmun.
+  CLEAR xmlh-vcredpresibs.
+  CLEAR xmlh-vcredprescondsusibs.
+  CLEAR xmlh-vcredprescbs.
+  CLEAR xmlh-vcredprescondsuscbs.
+  CLEAR xmlh-vdifcbs.
+  CLEAR xmlh-vdevtribcbs.
+  CLEAR xmlh-vnftot.
+
+ENDFORM.
