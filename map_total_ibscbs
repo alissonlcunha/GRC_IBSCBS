@@ -1,0 +1,77 @@
+FORM map_total_ibscbs USING    xmlh              TYPE j1b_nf_xml_header
+                               gt_rfc_ibscbs     TYPE j_1bnfe_t_rfc_tax_ibscbs
+                      CHANGING gs_rfc_ibscbs_tot TYPE j_1bnfe_s_rfc_ibscbstot
+                               gs_rfc_nf_tot     TYPE j_1bnfe_s_rfc_nftot.
+
+  IF gt_rfc_ibscbs IS NOT INITIAL.
+
+    gs_rfc_ibscbs_tot-v_ibs_uf                 = |{ xmlh-vibsuf }|.
+    gs_rfc_ibscbs_tot-v_ibs_mun                = |{ xmlh-vibsmun }|.
+    gs_rfc_ibscbs_tot-v_ibs                    = |{ xmlh-vibs }|.
+    gs_rfc_ibscbs_tot-v_cbs                    = |{ xmlh-vcbs }|.
+    gs_rfc_ibscbs_tot-v_bc_ibs_cbs             = |{ xmlh-vbcibscbs }|.
+    gs_rfc_ibscbs_tot-v_dif_ibs_uf             = |{ xmlh-vdifibsuf }|.
+    gs_rfc_ibscbs_tot-v_dev_trib_ibs_uf        = |{ xmlh-vdevtribibsuf  }|.
+    gs_rfc_ibscbs_tot-v_dif_ibs_mun            = |{ xmlh-vdifibsmun }|.
+    gs_rfc_ibscbs_tot-v_dev_trib_ibs_mun       = |{ xmlh-vdevtribibsmun  }|.
+    gs_rfc_ibscbs_tot-v_cred_pres_ibs          = |{ xmlh-vcredpresibs }|.
+    gs_rfc_ibscbs_tot-v_cred_pres_cond_sus_ibs = |{ xmlh-vcredprescondsusibs }|.
+    gs_rfc_ibscbs_tot-v_dif_cbs                = |{ xmlh-vdifcbs }|.
+    gs_rfc_ibscbs_tot-v_dev_trib_cbs           = |{ xmlh-vdevtribcbs }|.
+    gs_rfc_ibscbs_tot-v_cred_pres_cbs          = |{ xmlh-vcredprescbs }|.
+    gs_rfc_ibscbs_tot-v_cred_pres_cond_sus_cbs = |{ xmlh-vcredprescondsuscbs }|.
+
+    gs_rfc_nf_tot-v_nf_tot                     = |{ xmlh-vnftot }|.
+
+  ENDIF.
+
+  READ TABLE xml_ext2_tab TRANSPORTING NO FIELDS WITH KEY param = 'DET_IMPOSTO_IBSCBS'.
+
+  IF sy-subrc <> 0.
+    RETURN.
+  ENDIF.
+
+  CLEAR: gt_xml_ext2_tab[].
+
+  APPEND: VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_IBS_UF'                 value = xmlh-vibsuf              ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_IBS_MUN'                value = xmlh-vibsmun             ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_IBS'                    value = xmlh-vibs                ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_CBS'                    value = xmlh-vcbs                ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_BC_IBS_CBS'             value = xmlh-vbcibscbs           ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_DIF_IBS_UF'             value = xmlh-vdifibsuf           ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_DEV_TRIB_IBS_UF'        value = xmlh-vdevtribibsuf       ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_DIF_IBS_MUN'            value = xmlh-vdifibsmun          ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_DEV_TRIB_IBS_MUN'       value = xmlh-vdevtribibsmun      ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_CRED_PRES_IBS'          value = xmlh-vdifibsmun          ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_CRED_PRES_COND_SUS_IBS' value = xmlh-vcredprescondsusibs ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_DIF_CBS'                value = xmlh-vdifcbs             ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_DEV_TRIB_CBS'           value = xmlh-vdevtribcbs         ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_CRED_PRES_CBS'          value = xmlh-vcredprescbs        ) TO gt_xml_ext2_tab,
+          VALUE j1b_nf_xml_extension2( docnum = xmli-docnum itmnum = xmli-itmnum param = 'TOTAL_IMPOSTO_IBSCBS' field = 'V_CRED_PRES_COND_SUS_CBS' value = xmlh-vcredprescondsuscbs ) TO gt_xml_ext2_tab.
+
+  LOOP AT gt_xml_ext2_tab ASSIGNING FIELD-SYMBOL(<fs_ext2>).
+    CONDENSE <fs_ext2>-value NO-GAPS.
+
+    IF <fs_ext2>-field = 'V_DIF_IBS_UF' OR
+       <fs_ext2>-field = 'V_DEV_TRIB_IBS_UF' OR
+       <fs_ext2>-field = 'V_DIF_IBS_MUN' OR
+       <fs_ext2>-field = 'V_DEV_TRIB_IBS_MUN' OR
+       <fs_ext2>-field = 'V_IBS_MUN' OR
+       <fs_ext2>-field = 'V_CRED_PRES_IBS' OR
+       <fs_ext2>-field = 'V_CRED_PRES_COND_SUS_IBS' OR
+       <fs_ext2>-field = 'V_DIF_CBS' OR
+       <fs_ext2>-field = 'V_DEV_TRIB_CBS' OR
+       <fs_ext2>-field = 'V_CRED_PRES_CBS' OR
+       <fs_ext2>-field = 'V_CRED_PRES_COND_SUS_CBS'.
+      <fs_ext2>-row = 99.
+    ENDIF.
+
+  ENDLOOP.
+
+  IF gt_xml_ext2_tab[] IS NOT INITIAL.
+
+    APPEND LINES OF gt_xml_ext2_tab[] TO xml_ext2_tab[].
+
+  ENDIF.
+
+ENDFORM.
